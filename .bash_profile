@@ -2,15 +2,28 @@
 #
 # Martin Proffitts bash profile
 #
-# @package profile
+# @package bashprofile
 # @author  Martin Proffitt <mproffitt@jitsc.co.uk>
 # @link    http://www.jitsc.co.uk/
 
 if [ "$(whoami)" = 'root' ] ; then
     exit 0;
 fi
-
 reset;
+
+title=""
+
+cat << EOF
+*******************************************************************************
+Please wait whilst I load the profile...
+
+@package: BashProfile
+@author : Martin Proffitt <mproffitt@jitsc.co.uk>
+@license: GNU GPL V3 or later
+
+Please see the README for detailed instructions on using this profile.
+*******************************************************************************
+EOF
 
 [ "$TERM" = 'xterm' ] && export TERM='xterm-256color'
 [ -z $HOME ] && HOME='/home/'$(whoami);
@@ -28,6 +41,12 @@ export HOME=$HOME;
 [ -d ${HOME}/bin/jmeter/bin        ] && PATH="$PATH:${HOME}/bin/jmeter/bin"
 [ -d /usr/texbin                   ] && PATH="$PATH:/usr/texbin";
 [ -d "$HOME/.local/bin"            ] && PATH="$HOME/.local/bin:$PATH"
+
+# Windows specific paths
+if [ "$(uname -o)" = 'Cygwin' ] ; then
+    [ -d '/cygdrive/c/Program Files (x86)/MSBuild/14.0/Bin' ] && PATH=$PATH':/cygdrive/c/Program Files (x86)/MSBuild/14.0/Bin'
+fi
+
 export PATH=$PATH
 
 # Setup the terminal
@@ -40,12 +59,16 @@ export EDITOR=vim
 export GRADLE_HOME='/usr/local/gradle'
 export CLEWNDIR=$HOME/.vim/bundle/pyclewn/macros
 
-for file in $(ls $HOME/.profile | grep -v install) ; do
-    if [ -f $HOME/.profile/$file ]  && ! echo $file | grep -q disabled ; then
-        source $HOME/.profile/$file;
+for file in $(ls $HOME/.bashprofile | grep -v install) ; do
+    if [ -f $HOME/.bashprofile/$file ]  && ! echo $file | grep -q disabled ; then
+        source $HOME/.bashprofile/$file;
     fi
 done
 
+##
+# Gets the current working directory, changing the users home for ~ unless the current
+# directory IS the users home.
+#
 function _pwd()
 {
     local cwd="$(pwd)";
@@ -54,48 +77,36 @@ function _pwd()
     if [ $? -eq 0 ] ; then
         prwd=$(echo $cwd | sed "s/$(pwd | sed 's/\//\\\//g')\///");
     fi
-    echo -ne "\033]0;$(basename `pwd`)\007"
     cd "$cwd";
 
     echo $(echo $prwd | sed "s/$(echo $HOME | sed 's/\//\\\//g')\//~\//") | sed 's/^[ \t]*//g';
 }
 
+##
+# Lists the number of files in the current directory
+#
 function fileEntries()
 {
     local entries=$(ls -A | wc -l | awk '{print $1}');
     local hidden=$(( $( ls -A | wc -l ) - $( ls | wc -l)));
 
-    local cmds=('clear' 'resource' 'go' 'goto');
-    local found=1;
-    case "${cmds[@]}" in *"$cmd"*) found=0; esac;
-    if [ $found -eq 1 ] ; then
-        echo;
-        fill $(($(tput cols)-1)) '=';
-        echo;
-    fi
-
-    echo $'\e[37m'"$(_pwd): "$'\e[32m'"$entries entries, $hidden hidden."
+    echo $'\e[37m'$(_pwd): $'\e[32m'$entries entries, $hidden hidden.$'\e[0m'
 }
 
+##
+# Gets the shell prompt
+#
 function getPrompt()
 {
-    local cmd=$(history 1 | awk '{print $2}');
-    if ! echo $cmd | grep -qi '^[a-z0-9_-]\+=.*$'; then
-        echo $(fileEntries);
-        if isGitModule ; then
-            echo $(gitBranch)$(getRemoteURL);
-        elif isSvnModule ; then
-            echo $(svnModule);
-        fi
+    fileEntries;
+    if isGitModule ; then
+        echo $(gitBranch);
+    elif isSvnModule ; then
+        echo $(svnModule);
     fi
 }
 
-# Setup the prompt
-# This is used if powerline is not available
-export PS1='$(getPrompt)\n\[\033[35m\]\[\033[1m\D{%d-%m-%y @ %T} (\u)\[\033[00m\]\033[0m\] \$ ';
-export PS1='$(getPrompt)\n\033[00m\$ '
-
-if which powerline-daemon &>/dev/null ; then
+if which powerline-daemon &>/dev/null && [ ! -f ${HOME}/.bashprofile/function-parts/powerline.disabled ]; then
     powerline-daemon -q
     export POWERLINE_BASH_CONTINUATION=1
     export POWERLINE_BASH_SELECT=1
@@ -104,14 +115,18 @@ if which powerline-daemon &>/dev/null ; then
     if [ -f ~/.local/lib/python2.7/site-packages/powerline/bindings/bash/powerline.sh ]; then
         source ~/.local/lib/python2.7/site-packages/powerline/bindings/bash/powerline.sh
     fi
+else
+    PS1='$(getPrompt)\n\[\033[00m\]\$ '
 fi
 
-# if tmux exists and is not currently running, load it.
-if which tmux &>/dev/null && ! ps aux | grep -v grep | grep -q tmux; then
-    tmux;
+# Do not run tmux if we are running cygwin - it's hellishly slow.
+if [ "$(uname -o)" != 'Cygwin' ]; then
+    # if tmux exists and is not currently running, load it.
+    if which tmux &>/dev/null && ! ps aux | grep -v grep | grep -q tmux; then
+        tmux;
+    fi
 fi
 
 [[ -d "$HOME/.rvm" ]] && [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm";
 # suppress error code from last command as we don't care if .rvm doesn't exist.
 [ $? -ne 0 ] && echo -n '';
-

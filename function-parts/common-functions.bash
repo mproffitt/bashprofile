@@ -137,7 +137,7 @@ function query()
 #
 function exec_command()
 {
-    info "Executing $@";
+    inform "Executing $@";
     eval "$@";
 }
 
@@ -150,7 +150,7 @@ function exec_command()
 #
 function echo_command()
 {
-    info "Executing $@";
+    inform "Executing $@";
     echo "$@";
 }
 
@@ -179,7 +179,7 @@ function fill ()
 # @param message   string A message to add after the pad.
 #
 # This method does not print a newline character
-# 
+#
 function pad ()
 {
     BACK=$(fill $1 "$3")

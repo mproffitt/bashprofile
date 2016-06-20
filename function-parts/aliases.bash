@@ -7,7 +7,7 @@
 # @link    http://www.jitsc.co.uk/
 #
 
-! typeset -f inform &>/dev/null && source "$HOME/.profile/function-parts/common-functions.bash"
+! typeset -f inform &>/dev/null && source "$HOME/.bashprofile/function-parts/common-functions.bash"
 ##
 # Prints a list of all defined aliases
 #
@@ -16,7 +16,7 @@
 function aliases()
 {
     cwd=$(pwd);
-    cd ~/.profile;
+    cd ~/.bashprofile;
 
     for aliasFile in $(grep -r ^alias * | cut -d: -f1 | sort | uniq); do
         echo -n '#' ; fill 79 '#'; echo;
@@ -32,4 +32,5 @@ function aliases()
         done
         echo;
     done
+    cd $cwd
 }

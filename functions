@@ -6,8 +6,8 @@
 # @author  Martin Proffitt <mproffitt@jitsc.co.uk>
 # @link    http://www.jitsc.co.uk/
 
-for file in $(ls ~/.profile/function-parts | grep -v 'disabled') ; do
-    source ~/.profile/function-parts/$file;
+for file in $(ls ~/.bashprofile/function-parts | grep -v 'disabled') ; do
+    source ~/.bashprofile/function-parts/$file;
 done
 
 ##

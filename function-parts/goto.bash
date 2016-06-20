@@ -38,8 +38,8 @@
 _ORIGIN='';
 _GOTO_PATH="$HOME/.config/goto"
 
-! typeset -f inform &>/dev/null && source "$HOME/.profile/function-parts/common-functions.bash"
-! typeset -f moduleroot &>/dev/null && source "$HOME/.profile/function-parts/git-helpers.bash"
+! typeset -f inform &>/dev/null && source "$HOME/.bashprofile/function-parts/common-functions.bash"
+! typeset -f moduleroot &>/dev/null && source "$HOME/.bashprofile/function-parts/git-helpers.bash"
 
 [ ! -d "$_GOTO_PATH" ] && mkdir -p "$_GOTO_PATH";
 
@@ -192,7 +192,7 @@ function goto () {
     ;;
     *)
         local location=$1
-        if [ ! -s "$_GOTO_PATH/$1" ] ; then
+        if ! [[ -L "$_GOTO_PATH/$1" && -d "$_GOTO_PATH/$1" ]] ; then
             inform "$1 has not been linked before"
             answer=$(query "do you wish to locate it? [a]utomatic, [m]anual" a m);
             case $answer in

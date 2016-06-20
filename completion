@@ -7,6 +7,6 @@
 # @link    http://www.jitsc.co.uk/
 
 
-for file in $(ls ~/.profile/completion-parts/ | grep -v 'disabled') ; do
-    source ~/.profile/completion-parts/$file;
+for file in $(ls ~/.bashprofile/completion-parts/ | grep -v 'disabled') ; do
+    source ~/.bashprofile/completion-parts/$file;
 done

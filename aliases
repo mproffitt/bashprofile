@@ -7,8 +7,8 @@
 # @link    http://www.jitsc.co.uk/
 #
 
-for file in $(ls ~/.profile/alias-parts/ | grep -v 'disabled') ; do
-    source ~/.profile/alias-parts/$file;
+for file in $(ls ~/.bashprofile/alias-parts/ | grep -v 'disabled') ; do
+    source ~/.bashprofile/alias-parts/$file;
 done
 
 ##

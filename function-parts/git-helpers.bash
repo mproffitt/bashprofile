@@ -14,7 +14,17 @@ export _GIT_USER=$(git config --get user.username  || whoami)
 
 # Bash scripts to load
 if [ -f /usr/local/git/contrib/completion/git-completion.bash ] ; then
-    source /usr/local/git/contrib/completion/git-completion.bash
+    source /usr/local/git/contrib/completion/git-completion.bash;
+elif [ "$(uname -o)" = "Cygwin" ] ; then
+    if [ ! -f /usr/local/bin/git-prompt.sh ]; then
+        cwd=$(pwd);
+        cd /usr/local/bin;
+        curl -k https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh > git-prompt.sh
+        chmod +x git-prompt.sh
+        cd $cwd;
+    fi
+    source /usr/share/bash-completion/completions/git;
+    source /usr/local/bin/git-prompt.sh
 else
     source /usr/share/doc/git/contrib/completion/git-prompt.sh;
     source /usr/share/doc/git/contrib/completion/git-completion.bash;
@@ -24,6 +34,17 @@ if [ -f /usr/local/bin/git-flow-completion.bash ]; then
     source /usr/local/bin/git-flow-completion.bash;
 fi
 
+GIT_BRANCH=''
+GIT_TAGGED=$'\u2605';
+GIT_PULL=$'\u2193';
+GIT_PUSH=$'\u2191';
+GIT_STAGED='●';
+GIT_UNMERGED='✖';
+GIT_CHANGED='✚';
+GIT_UNTRACKED=$'…'
+GIT_STASHED=$'\u2691';
+
+
 ##
 # Used by the __ps1 to determine if the current directory is a git module
 #
@@ -32,7 +53,6 @@ fi
 function isGitModule()
 {
     git rev-parse --git-dir &>/dev/null;
-    return $?;
 }
 
 ###
@@ -40,7 +60,8 @@ function isGitModule()
 #
 # @return bool 0 on success
 #
-function moduleroot () {
+function moduleroot()
+{
     local wd="$(pwd)";
     while [ ! -d ".git" ]  && [ "$(pwd)" != "/" ] ; do
         cd ..;
@@ -48,7 +69,7 @@ function moduleroot () {
 
     local moduleName=$(basename `pwd`);
     if [ "$moduleName" = "/" ] ; then
-        echo "Cannot find root directory for current module. Are you sure it's a git repository?" >&2;
+        error "Cannot find root directory for current module. Are you sure it's a git repository?" >&2;
         cd "$wd";
         return 1;
     fi
@@ -135,12 +156,62 @@ function svnModule()
 function gitBranch()
 {
     local cwd=$(pwd);
-    git rev-parse --git-dir &>/dev/null;
-    if [ $? -eq 0 ] ; then
+
+    if git rev-parse --git-dir &>/dev/null ; then
         moduleName=$(basename $(dirname `git rev-parse --git-dir`));
         [ "$moduleName" = '.' ] && moduleName=$(basename `pwd`);
-        echo $'\e[37mGit module: '$'\e[33m'$moduleName;
-        echo ' '$'\e[37mbranch:'$'\e[33m'$(__git_ps1);
+        moduleName=$(echo $moduleName | sed 's/^\.//g');
+        git status --branch --porcelain 2>/dev/null | awk -v moduleName="$moduleName" '
+            BEGIN {
+                ORS="";
+                behind=0;
+                ahead=0
+                staged=0;
+                unmerged=0;
+                changed=0;
+                untracked=0;
+            }
+            /^##.*/{
+                aheadIndex=index($0, "ahead")+length("ahead")+1;
+                if (aheadIndex == length("ahead")+1) {
+                    ahead=0
+                } else {
+                    behindIndex=index($0, "behind")+length("behind")+1;
+                    if (behindIndex == length("behind")+1) {
+                        ahead=substr($0, aheadIndex, (length($0)-aheadIndex));
+                    } else {
+                        ahead=substr($0, aheadIndex, ((behindIndex-9)-aheadIndex));
+                        behind=substr($0, behindIndex, length($0)-behindIndex)
+                    }
+                }
+                branch=substr($0, 4, index($0, "...")-4);
+                if (!branch) {
+                    "git rev-parse --short HEAD" | getline branch
+                }
+            }
+            /^ ?([MRC]|(D[^D])|(A[^A]))/{
+                staged++;
+            }
+            /^ ?(.?[U])|DD|AA/{
+                unmerged++;
+            }
+            /^ ?((.?M)|([^D]D))/{
+                changed++;
+            }
+            /^ ?[?]/{
+                untracked++;
+            }
+            END {
+                print "\033[33mgit:\033[0m ";
+                print "module \033[36m"moduleName"\033[0m ";
+                print "(\033[32m"branch"\033[0m) ";
+                print "\033[33mA\033[0m("ahead") ";
+                print "\033[33mB\033[0m("behind") ";
+                print "\033[33ms\033[0m("staged") ";
+                print "\033[33mu\033[0m("unmerged") ";
+                print "\033[33mc\033[0m("changed") ";
+                print "\033[33mU\033[0m("untracked") ";
+            }'
     fi
     cd $cwd;
 }
@@ -258,10 +329,9 @@ function update()
 #
 # @return void
 #
-remove_repo() {
+function remove_repo() {
 
-        info "Attempting removal of versioned repo from pwd =  `pwd`"
-
+    inform "Attempting removal of versioned repo from pwd =  `pwd`"
     module=$1;
     while [ ! -d '.git' ] ; do
         cd ..;
@@ -284,7 +354,6 @@ remove_repo() {
 
 ##
 # Checks all git modules in the current directory have the correct remotes
-#
 #
 function checkmodules ()
 {
