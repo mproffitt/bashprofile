@@ -1,0 +1,303 @@
+#!/bin/bash
+#
+# Misc. functions and Load helper functions
+#
+# @package profile
+# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
+# @link    http://www.jitsc.co.uk/
+
+for file in $(ls ~/.profile/function-parts | grep -v 'disabled') ; do
+    source ~/.profile/function-parts/$file;
+done
+
+##
+# Lists all defined aliases on the current shell
+#
+# @return void
+#
+function defaliases ()
+{
+    alias | sed 's/=/ /g' | cut -d\  -f2
+}
+
+##
+# Lists all defined symbolic links in the given directory
+#
+# @param string directory The directory to list
+#
+# @return void
+#
+function lss ()
+{
+    local directory=$1;
+    ls -lah $directory | grep "^l";
+}
+
+##
+# Searches all files under the current directory for the given string of text
+#
+# @param mixed @ The string or regex to search for
+#
+# @return void
+#
+function findinfile ()
+{
+    find -P '.' -type f -print -follow | sed "s/ /\\\ /g" | xargs grep -in --color "$@";
+}
+
+##
+# Pulls in the latest changes from master/develop
+#
+# @return void
+#
+function update ()
+{
+    local stashed=-1;
+    if [ "$(git status | grep 'working directory clean\|nothing added to commit')" != "" ] ; then
+        git stash;
+        stashed=0;
+    fi
+
+    local oldBranch=$(git rev-parse --abbrev-ref HEAD);
+    if [ "$oldBranch" != "master" ] ; then
+        git checkout master;
+    fi
+
+    git fetch origin && git merge origin master;
+    if [ "$oldBranch" != "master" ] ; then
+        git checkout $oldBranch;
+        echo "Do you want to merge master into the current branch ($oldBranch)? \c";
+        read merge;
+
+        if [ "$merge" = "y" ] ; then
+            git merge origin master;
+        fi
+    fi
+
+    if [ $stashed -eq 0 ] ; then
+        git stash pop;
+    fi
+}
+
+##
+# Sets a notification using the Growl notification system on mac
+#
+# @param string message The message to notify with
+#
+# @return void
+#
+# NOTE: MAC only
+#
+growl()
+{
+    local message="$@";
+    echo -e $'\e]9;'$message'\007';
+}
+
+##
+# Clears the screen and changes to a given directory
+#
+# @param directory string
+#
+function ccd ()
+{
+    clear;
+    /usr/bin/cd "$@";
+}
+
+##
+# search ps listing without showing ps of grep
+#
+# @param name string
+#
+function psof()
+{
+    local ps_args='aux';
+    if [ $# -eq 2 ]; then
+        if [ "$1" != '' ]; then
+            ps_args="$1";
+
+        fi
+        shift;
+    fi
+
+    local cmd=$(echo $1 | sed 's/^\([a-z]\)/\[\1\]/');
+    eval "ps $ps_args | grep $cmd";
+}
+
+##
+# Get the process ID[s] of a given command
+#
+# @param name string
+#
+function psonly()
+{
+    oldIFS=$IFS;
+    IFS=$'\n';
+    for line in $(psof $1); do
+        echo $line | awk '{print $2}';
+    done
+    IFS=$oldIFS;
+}
+
+##
+# Launches an application after 10 seconds (with countdown)
+#
+# @param command string The command and arguments to execute
+#
+# @return LAST_EXIT_STATUS
+#
+function x()
+{
+    seq 10 | sort -rn | xargs -I{} sh -c 'figlet {}; sleep 1'; figlet 'BLAST OFF!';
+    eval "$@";
+    return $?;
+}
+
+##
+# Onto a given host as a user
+#
+# @param host string
+# @param user string
+#
+# [deprecated] Use waitssh instead
+#
+function onto()
+{
+    if [ $# -le 1 ] || [ $# -gt 2 ] ; then
+        error "Usage: onto <host> <user>"; return 1;
+    fi;
+
+    if [ -z $1 ] ; then error "No host provided."; return 1; fi;
+    local host=$1;
+
+    local user=$2;
+    local sshUser="";
+    if [ -z $user ] ; then
+        grep -q $host '^jenkins' && sshUser='jenkins';
+        if [ -z $sshUser ] && echo "jira confluence fisheye sonar nexus" | grep -q $user; then
+            sshUser='root';
+        fi
+    fi;
+
+    if ! grep -q $host ~/.ssh/config; then
+        if ! grep -q $host /etc/hosts; then
+            error "Invalid host name for SSH connection" && return 1;
+        else
+            host=$(grep $host /etc/hosts | awk '{print $NF}');
+        fi
+    fi
+    ssh $user@${host};
+}
+
+##
+# Launch PyClewn debugger
+function vdb()
+{
+    pyclewn --gdb="async" --args="--args $@" --cargs='-c "runtime misc/pclewn.vim" -c "call PyClewnPre()"'
+}
+
+##
+# Shows a spinner for long running tasks
+#
+# @param pid int The process ID to monitor
+#
+spinner()
+{
+    local pid=$1;
+    local string=$2;
+    local delay=0.75;
+    local spinstr='|/-\';
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?};
+        printf "$string [%c]  \r" "$spinstr";
+        local spinstr=$temp${spinstr%"$temp"};
+        sleep $delay;
+    done
+    echo;
+}
+
+##
+# Builds a latex file using pdflatex and opens it in the system default pdf reader
+#
+function buildtex()
+{
+    clear;
+    local file="";
+    [ -z $1 ] && { echo "<file> is required" && return 1; };
+    file=$1;
+
+    [ ! -f $file ] && { echo "$file must exist" && return 1; };
+    [ ! -d build ] && mkdir build;
+
+    {
+        for i in {1..4}; do
+            pdflatex --output-dir=build $file 1>/dev/null;
+        done 2>/dev/null &
+        spinner $! "Building: $(echo $file | sed 's/.tex$//; s/_/ /g')";
+    } 2>/dev/null;
+    open build/$(echo $file | sed 's/tex$/pdf/');
+}
+
+##
+# Sets the window title
+#
+# @param title
+#
+function settitle()
+{
+    name=$(basename `pwd`)
+    if [ ! -z "$1" ]
+    then
+        name="$1"
+    fi
+    printf "\033k$name\033\\"
+}
+
+##
+# Waits for an ssh connection to become available
+#
+# @param server
+#
+function waitssh()
+{
+    local user='root'
+    local server=$1
+    if [ ! -z "$2" ] ; then
+        user="$2"
+    fi
+    until ssh "${user}@${server}" 2>/dev/null; do
+        echo -n '.';
+        sleep 0.1;
+    done
+}
+
+##
+# Executes nuget.exe using mono
+#
+# @param args list
+#
+function nuget()
+{
+    local args="$@"
+
+    mono ${HOME}/bin/nuget/nuget.exe $args
+}
+
+##
+# Compares two sets of strings
+#
+function diffstrings()
+{
+    echo "$1" > /tmp/diff01.txt;
+    shift;
+    echo "$1" > /tmp/diff02.txt;
+    shift;
+
+    args='';
+    if [ ${#@} -gt 0 ] ; then
+        args="$@";
+    fi
+    diff $args /tmp/diff01.txt /tmp/diff02.txt;
+    rm /tmp/diff01.txt /tmp/diff02.txt;
+}

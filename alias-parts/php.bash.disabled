@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# Contains aliases for php functionality
+#
+# @package profile
+# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
+# @link    http://www.jitsc.co.uk/
+#
+phpUnitVersion=$(phpunit --version | head -n1 | awk '{print $2}');
+phpVersion=$(php -v | head -n1 | awk '{print $2}');
+phpdocVersion=$(phpdoc --version | awk '{print $3}');
+phpcsVersion=$(phpcs --version | awk '{print $3}');
+
+##
+# Perform PHP codesniffer on a file
+alias phpcs='phpcs --standard=Zend $1'
+
+##
+# Perform PHP codesniffer on all files under the current directory
+alias phpcs-all="clear && for file in \$(find -P \$(if [ \"\$1\" == \"\" ] ; then echo \"./\" ; else echo \"\$1\" ; fi) -name *.php); do phpcs \$file; done"
+
+##
+# Run PHPUnit
+alias phpunit="clear && if [ -d /tmp/${PWD##*/} ] ; then /bin/rm -rf /tmp/${PWD##*/}; fi; phpunit --coverage-html /tmp/${PWD##*/}"
+
+##
+# Run mvn clean verify using machine specific versions
+alias phpverify="mvn clean verify -e -U -D expected-phpunit-version=$phpUnitVersion -D expected-phpdoc-version=$phpdocVersion -D expected-phpcs-version=$phpcsVersion";
+
+##
+# Run composer
+alias composer='php ~/bin/composer.phar'
+
+##
+# Create Zend module at current location
+alias zf="zf.sh"

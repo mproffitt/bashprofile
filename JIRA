@@ -1,0 +1,12 @@
+#!/bin/bash
+#
+# JIRA functions from bash
+# 
+# @package profile
+# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
+# @link    http://www.jitsc.co.uk/
+#
+
+export JIRA_USERNAME=''
+export JIRA_PASSWORD='';
+
