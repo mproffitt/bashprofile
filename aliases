@@ -7,17 +7,17 @@
 # @link    http://www.jitsc.co.uk/
 #
 
-for file in $(ls ~/.bashprofile/alias-parts/ | grep -v 'disabled') ; do
-    source ~/.bashprofile/alias-parts/$file;
+for file in $(ls ~/.bashprofile/alias-modules/ | grep -v 'disabled\|README') ; do
+    source ~/.bashprofile/alias-modules/$file;
 done
 
 ##
 # Reload bash_profile
-alias resource='clear && . ~/.bash_profile';
+alias resource='clear && source ~/.bash_profile';
 
 ##
 # Show all defined functions
-alias functions='typeset -F | sed s/declare\ \-f\ //g';
+alias lfunc='typeset -F | sed s/declare\ \-f\ //g';
 
 ##
 # Run update-modules script
@@ -36,9 +36,11 @@ alias gimmespace='perl -e "print \"\n\"x20;"';
 #alias rundeck='cd ~/apps/rundeck && nohup tools/bin/run';
 alias rundeck='cd ~/apps/rundeck && nohup java -jar rundeck-launcher-1.6.2.jar > ~/logs/rundeck.log 2>&1 &';
 
-##
-# tmux alias
-#alias tmux="TERM=screen-256color-bce tmux";
+if [ $(uname -o) = 'Darwin' ] ; then
+  ##
+  # tmux alias
+  alias tmux="TERM=screen-256color-bce tmux";
+fi
 
 ##
 # Burp
@@ -48,5 +50,23 @@ alias burp='nohup java -jar -Xmx1g /home/mproffitt/apps/burp.jar &>/dev/null &'
 # onto
 alias o='onto'
 
-alias w='waitssh';
-alias ws='waitssh';
+##
+# Search
+alias s='search';
+
+##
+# Alias for the migflow application (NOT SHARED)
+alias tigflow=$HOME'/src/tigflow/tigflow';
+
+##
+# Alias for the tigflow application (NOT SHARED)
+alias migflow=$HOME'/src/migflow/build/src/migflow';
+
+##
+# Alias for radeontop -c
+alias radeontop='/usr/sbin/radeontop -c'
+
+##
+# Alias for search
+alias s='search';
+

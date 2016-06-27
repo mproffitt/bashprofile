@@ -6,8 +6,8 @@
 # @author  Martin Proffitt <mproffitt@jitsc.co.uk>
 # @link    http://www.jitsc.co.uk/
 
-for file in $(ls ~/.bashprofile/function-parts | grep -v 'disabled') ; do
-    source ~/.bashprofile/function-parts/$file;
+for file in $(ls ~/.bashprofile/function-modules | grep -v 'disabled\|README') ; do
+    source ~/.bashprofile/function-modules/$file;
 done
 
 ##
@@ -88,7 +88,7 @@ function update ()
 #
 # NOTE: MAC only
 #
-growl()
+function growl()
 {
     local message="$@";
     echo -e $'\e]9;'$message'\007';
@@ -108,7 +108,8 @@ function ccd ()
 ##
 # search ps listing without showing ps of grep
 #
-# @param name string
+# @param string args [optional]
+# @param string application
 #
 function psof()
 {
@@ -149,7 +150,7 @@ function psonly()
 #
 function x()
 {
-    seq 10 | sort -rn | xargs -I{} sh -c 'figlet {}; sleep 1'; figlet 'BLAST OFF!';
+    seq 10 | sort -rn | xargs -I{} sh -c 'figlet {}; sleep 1';
     eval "$@";
     return $?;
 }
@@ -202,7 +203,7 @@ function vdb()
 #
 # @param pid int The process ID to monitor
 #
-spinner()
+function spinner()
 {
     local pid=$1;
     local string=$2;

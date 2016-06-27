@@ -94,6 +94,16 @@ function fileEntries()
 }
 
 ##
+# Gets a prompt line for SSHSF
+#
+function sshfsPrompt()
+{
+    if grep -q "$(pwd)[^/]" /etc/mtab; then
+        echo $'\e[37msshfs: \e[0m'$(grep $(pwd) /etc/mtab | cut -d\  -f1)
+    fi
+}
+
+##
 # Gets the shell prompt
 #
 function getPrompt()
@@ -104,9 +114,10 @@ function getPrompt()
     elif isSvnModule ; then
         echo $(svnModule);
     fi
+    sshfsPrompt
 }
 
-if which powerline-daemon &>/dev/null && [ ! -f ${HOME}/.bashprofile/function-parts/powerline.disabled ]; then
+if which powerline-daemon &>/dev/null && [ ! -f ${HOME}/.bashprofile/function-modules/powerline.disabled ]; then
     powerline-daemon -q
     export POWERLINE_BASH_CONTINUATION=1
     export POWERLINE_BASH_SELECT=1

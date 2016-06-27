@@ -25,9 +25,10 @@ elif [ "$(uname -o)" = "Cygwin" ] ; then
     fi
     source /usr/share/bash-completion/completions/git;
     source /usr/local/bin/git-prompt.sh
-else
+elif [ -f /etc/bash_completion.d/git-prompt ] ; then
+    source /etc/bash_completion.d/git-prompt
+elif [ -f /usr/share/doc/git/contrib/completion/git-prompt.sh ] ; then
     source /usr/share/doc/git/contrib/completion/git-prompt.sh;
-    source /usr/share/doc/git/contrib/completion/git-completion.bash;
 fi
 
 if [ -f /usr/local/bin/git-flow-completion.bash ]; then
@@ -246,7 +247,8 @@ function git_requires_merge()
 #
 # This function will clone a repository out and cd in to the directory created
 #
-function clone() {
+function clone()
+{
     local url="$1";
     local urlWords=$(echo $url | sed 's.[ /:.]. .g; s.  . .g');
     if [ $(echo $urlWords | wc -w | awk '{print $1}') -le 2 ] ; then
@@ -329,7 +331,8 @@ function update()
 #
 # @return void
 #
-function remove_repo() {
+function remove_repo()
+{
 
     inform "Attempting removal of versioned repo from pwd =  `pwd`"
     module=$1;
@@ -355,7 +358,7 @@ function remove_repo() {
 ##
 # Checks all git modules in the current directory have the correct remotes
 #
-function checkmodules ()
+function checkmodules()
 {
     local failedModules="";
 
@@ -405,7 +408,7 @@ function checkmodules ()
 #
 # @return bool
 #
-function fixremote ()
+function fixremote()
 {
     local wd=$(pwd);
     # make sure we are in the base dir

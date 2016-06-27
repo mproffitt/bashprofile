@@ -8,12 +8,12 @@
 #
 
 ##
-# Alias for git checkout
+# Checkout to a specific branch or create a new one
 #
 alias co='checkout';
 
 ##
-# Alias for git fetch
+#
 #
 alias fetch='git fetch -p'
 

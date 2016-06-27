@@ -33,6 +33,7 @@ NORMAL=$(tput sgr0)
 function fatal()
 {
     echo "$RED[FATAL]$RESET $@" 1>&2;
+    [ ! -z $1 ] && exit $1 || exit 1;
 }
 
 ##

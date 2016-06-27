@@ -1,7 +1,7 @@
 #!/bin/bash
 [ "$(basename $(pwd))" = 'install' ] && cd ..
 
-source $(pwd)/function-parts/common-functions.bash
+source $(pwd)/function-modules/common-functions.bash
 
 function install_profile()
 {
@@ -14,15 +14,15 @@ function install_profile()
     local modulename=$(basename $(pwd))
     cd ~
 
-    mv -R $parent/$modulename /home/$(whoami)/.bashprofile
+    mv $parent/$modulename /home/$(whoami)/.bashprofile
 
     mv /home/$(whoami)/.bash_profile /home/$(whoami)/.bash_profile_$(date +%Y-%m-%d);
-    mv .bashprofile/.bash_profile /home/$(whoami)/.bash_profile
+    cp .bashprofile/.bash_profile /home/$(whoami)/.bash_profile
 }
 
 function install_git_config()
 {
-    if [ ! -f /home/$(whoami)/.gitconfig) ] ; then
+    if [ ! -f /home/$(whoami)/.gitconfig ] ; then
         inform "Installing git config"
         cp .bashprofile/.gitconfig /home/$(whoami)/.gitconfig
     fi
@@ -88,6 +88,7 @@ function install_bashprofile ()
     #[ "$(uname -o)" = 'Cygwin' ] &&    install_powerline_adaptor
 }
 
+install_bashprofile
 source /home/$(whoami)/.bash_profile
 
 cat << EOF

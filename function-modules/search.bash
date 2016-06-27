@@ -73,6 +73,7 @@ function rhymes()
 
 ##
 # Gets the definition of a word
+#
 function define()
 {
     local word="";
@@ -297,7 +298,4 @@ function search()
     return $?;
 }
 
-##
-# Alias for search
-alias s='search';
 

@@ -38,8 +38,8 @@
 _ORIGIN='';
 _GOTO_PATH="$HOME/.config/goto"
 
-! typeset -f inform &>/dev/null && source "$HOME/.bashprofile/function-parts/common-functions.bash"
-! typeset -f moduleroot &>/dev/null && source "$HOME/.bashprofile/function-parts/git-helpers.bash"
+! typeset -f inform &>/dev/null && source "$HOME/.bashprofile/function-modules/common-functions.bash"
+! typeset -f moduleroot &>/dev/null && source "$HOME/.bashprofile/function-modules/git-helpers.bash"
 
 [ ! -d "$_GOTO_PATH" ] && mkdir -p "$_GOTO_PATH";
 
@@ -115,6 +115,9 @@ function find_path()
     echo "$location";
 }
 
+##
+# Reads the origin of the module
+#
 function get_module_origin()
 {
     origin=$(git config --get remote.origin.url);
@@ -177,7 +180,8 @@ function unload()
 # Type "echo $_DIR_LIST" for quick locations.
 # Tab complete is available.
 #
-function goto () {
+function goto()
+{
     clear;
     local retVal=0;
     local dir;
@@ -246,27 +250,10 @@ function goto () {
 ##
 # Completion function for goto method
 #
-_goto_complete () {
+function _goto_complete()
+{
     COMPREPLY=();
     local cur="${COMP_WORDS[COMP_CWORD]}";
     COMPREPLY=( $(compgen -S ' ' -W "home moduleroot $(ls $_GOTO_PATH)" -- ${cur}) );
 }
 
-##
-# Shortcut for the goto function
-#
-alias g='goto';
-
-##
-# Shortcut for the goto function
-#
-alias go='goto';
-
-##
-# shortcut for linking for goto
-#
-alias gl='goto_link'
-
-complete -o default -F _goto_complete g
-complete -o default -F _goto_complete go
-complete -o default -F _goto_complete goto
