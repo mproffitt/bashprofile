@@ -70,3 +70,6 @@ alias radeontop='/usr/sbin/radeontop -c'
 # Alias for search
 alias s='search';
 
+##
+# Alias for waitssh
+alias ws='waitssh'

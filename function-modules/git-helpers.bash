@@ -185,9 +185,13 @@ function gitBranch()
                         behind=substr($0, behindIndex, length($0)-behindIndex)
                     }
                 }
-                branch=substr($0, 4, index($0, "...")-4);
-                if (!branch) {
-                    "git rev-parse --short HEAD" | getline branch
+                if (index($0, "...") == 0) {
+                    branch=substr($0, 4, length($0))
+                } else {
+                    branch=substr($0, 4, index($0, "...")-4);
+                    if (!branch) {
+                        "git rev-parse --short HEAD" | getline branch
+                    }
                 }
             }
             /^ ?([MRC]|(D[^D])|(A[^A]))/{
@@ -214,7 +218,7 @@ function gitBranch()
                 print "\033[33mU\033[0m("untracked") ";
             }'
     fi
-    cd $cwd;
+    cd "$cwd";
 }
 
 ##

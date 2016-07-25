@@ -9,15 +9,12 @@
 
 ##
 # Checkout to a specific branch or create a new one
-#
 alias co='checkout';
 
 ##
-#
-#
+# Alias for git fetch with prune for local branches
 alias fetch='git fetch -p'
 
 ##
 # Alias for git commit
-#
 alias commit='git commit'

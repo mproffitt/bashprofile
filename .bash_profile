@@ -114,7 +114,9 @@ function getPrompt()
     elif isSvnModule ; then
         echo $(svnModule);
     fi
-    sshfsPrompt
+    if [ "$(uname -o)" != 'Cygwin' ] ; then
+        sshfsPrompt
+    fi
 }
 
 if which powerline-daemon &>/dev/null && [ ! -f ${HOME}/.bashprofile/function-modules/powerline.disabled ]; then

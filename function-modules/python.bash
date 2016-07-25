@@ -18,7 +18,8 @@ function pt()
         echo "Arguments required for nosetests"
         return 1
     fi
-    nosetests-3.4 $suppress $(find -P . -name test_${1}.py | sed 's/\.\///')
+    packages=$(sed '/package/,/\]/!d;/package/d;/\]/d;s/^\s\+//g;' setup.py | sed ':a;N;$!ba;s/\n//g' | tr -d \')
+    nosetests-3.4 --with-coverage --cover-branches --cover-package=$packages $suppress $(find -P . -name test_${1}.py | sed 's/\.\///')
 }
 
 ##

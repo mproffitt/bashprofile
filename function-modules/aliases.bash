@@ -29,8 +29,7 @@ function aliases()
 
         for a in $(cat $aliasFile | grep ^alias | tr ' ' '_') ; do
             line=$(cat $aliasFile | grep -B1 "$(echo $a | tr '_' ' ' | cut -d= -f1)" | head -1);
-            echo $line | grep -q '#';
-            if [ $? -eq 0 ] ; then
+            if echo $line | grep -q '#' ; then
                 alias=$(cat $aliasFile | grep -A1 "$line" | tail -1 | cut -d= -f1 | cut -d\  -f2);
                 echo "$alias $(fill $((20 - ${#alias})) ' ') $line";
             fi

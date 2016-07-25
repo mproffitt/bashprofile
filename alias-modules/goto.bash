@@ -1,15 +1,21 @@
-##
-# Shortcut for the goto function
+#!/bin/bash
 #
-alias g='goto';
+# Contains aliases for goto functionality
+#
+# @package profile
+# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
+# @link    http://www.jitsc.co.uk/
+#
 
 ##
-# Shortcut for the goto function
-#
+# Alias for the goto function
 alias go='goto';
 
 ##
-# shortcut for linking for goto
-#
-alias gl='goto_link'
+# Alias for linking for goto
+alias gl='goto_link';
+
+##
+# A shorter alias for goto
+alias g='goto';
 
