@@ -59,7 +59,7 @@ function pylint()
     fi
     clear;
 
-    python3-pylint $report "$1"
+    /usr/bin/pylint $report "$1"
 }
 
 ##
