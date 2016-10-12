@@ -59,7 +59,7 @@ function pylint()
     fi
     clear;
 
-    /usr/bin/pylint $report "$1"
+    $(which pylint) $report "$1"
 }
 
 ##

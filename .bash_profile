@@ -90,6 +90,7 @@ function fileEntries()
     local entries=$(ls -A | wc -l | awk '{print $1}');
     local hidden=$(( $( ls -A | wc -l ) - $( ls | wc -l)));
 
+    echo -n $'\e[1m\e[31m'$(hostname)$'\e[0m'' : '
     echo $'\e[37m'$(_pwd): $'\e[32m'$entries entries, $hidden hidden.$'\e[0m'
 }
 
