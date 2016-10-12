@@ -73,3 +73,11 @@ alias s='search';
 ##
 # Alias for waitssh
 alias ws='waitssh'
+
+##
+# Alias to re-ip VirtualBox interface if broken
+alias rvbnet='vboxmanage hostonlyif vboxnet0 --ip 192.168.56.1'
+
+##
+# Alias to link resolv.conf to /run/resolvconf/resolv.conf
+alias rescon='sudo ln -sf /run/resolvconf/resolv.conf /etc/resolv.conf && ls -al /etc/resolv.conf'

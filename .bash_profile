@@ -6,8 +6,11 @@
 # @author  Martin Proffitt <mproffitt@jitsc.co.uk>
 # @link    http://www.jitsc.co.uk/
 
-if [ "$(whoami)" = 'root' ] || ! echo $- | grep -q i ; then
-    return
+##
+# Do not load if we're logging in as root, or if we're not in an
+# interactive session.
+if [ "$(whoami)" = 'root' ] || ! echo $- | grep -q i; then
+    return;
 fi
 reset;
 
@@ -34,12 +37,12 @@ export HOME=$HOME;
 [ -d /var/lib/gems/1.8/bin         ] && PATH="$PATH:/var/lib/gems/1.8/bin"
 [ -d /usr/local/mysql/bin          ] && PATH="$PATH:/usr/local/mysql/bin"
 [ -d /usr/local/pear/bin           ] && PATH="$PATH:/usr/local/pear/bin"
-[ -d /usr/local/gradle/bin         ] && PATH="$PATH:/usr/local/gradle/bin";
-[ -d ${HOME}/.vim/local/bin        ] && PATH="$PATH:${HOME}/.vim/local/bin";
+[ -d /usr/local/gradle/bin         ] && PATH="$PATH:/usr/local/gradle/bin"
+[ -d ${HOME}/.vim/local/bin        ] && PATH="$PATH:${HOME}/.vim/local/bin"
 [ -d ${HOME}/bin/jmeter/bin        ] && PATH="$PATH:${HOME}/bin/jmeter/bin"
 [ -d /usr/texbin                   ] && PATH="$PATH:/usr/texbin";
-[ -d "$HOME/.local/bin"            ] && PATH="$HOME/.local/bin:$PATH";
-[ -d /usr/local/cuda/bin           ] && PATH="$PATH:/usr/local/cuda/bin";
+[ -d "$HOME/.local/bin"            ] && PATH="$HOME/.local/bin:$PATH"
+[ -d /usr/local/cuda/bin           ] && PATH="$PATH:/usr/local/cuda/bin"
 
 # Windows specific paths
 if [ "$(uname -o)" = 'Cygwin' ] ; then
@@ -130,14 +133,6 @@ if which powerline-daemon &>/dev/null && [ ! -f ${HOME}/.bashprofile/function-mo
     fi
 else
     PS1='$(getPrompt)\n\[\033[00m\]\$ '
-fi
-
-# Do not run tmux if we are running cygwin - it's hellishly slow.
-if [ "$(uname -o)" != 'Cygwin' ]; then
-    # if tmux exists and is not currently running, load it.
-    if which tmux &>/dev/null && ! ps aux | grep -v grep | grep -q tmux; then
-        tmux;
-    fi
 fi
 
 SSH_ENV="$HOME/.keychain/${HOSTNAME}-sh"

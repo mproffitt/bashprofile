@@ -316,3 +316,95 @@ function diffstrings()
     diff $args /tmp/diff01.txt /tmp/diff02.txt;
     rm /tmp/diff01.txt /tmp/diff02.txt;
 }
+
+##
+# Helper function for port forwarding a remote server
+#
+function sshport()
+{
+    local localport=0
+    local remoteport=0
+    local server=''
+    local sshport=22
+    local user=$(whoami)
+
+    if [ $# -lt 2 ]; then
+        warn 'Usage: `sshport <host> <port>`' >&2
+        warn '       `sshport <host> <remote_port> <local_port>`'
+        return 1
+    fi
+
+    local regex='^[0-9]+$'
+    while [ $# -ne 0 ] ; do
+        current="$1"
+        shift
+        if [[ "$current" =~ $regex ]]; then
+            [ $remoteport -eq 0 ] && remoteport=$current || localport=$current
+        elif [ "$current" = '-p' ] ; then
+            current="$1"
+            shift
+            if [[ "$current" =~ $regex ]]; then
+                sshport=$current
+            fi
+        elif [ "$current" = '-u' ] ; then
+            user="$1";
+            shift
+        else
+            server=$current
+        fi
+    done
+    [ $localport -eq 0 ] && localport=$remoteport
+
+    local valid=0
+    if [ $remoteport -eq 0 ]; then
+        error "Invalid remote port specified"
+        valid=1
+    fi
+
+    if [ $localport -eq 0 ] ; then
+        error "Invalid local port specified"
+        valid=1
+    fi
+
+    if [ ! $valid ] ; then
+        return 1
+    fi
+
+    # Check that the host is listening for SSH connections
+    if ! </dev/tcp/$server/$sshport ; then
+        error "Server '${server}' is not listening on '${sshport}'"
+        return 1
+    fi
+
+    inform "Waiting for SSH connection to $localport:$user@$server:$remoteport"
+    until ssh -NTCf -L $localport:localhost:$remoteport $user@$server -p $sshport; do
+        echo -n '.';
+        sleep 0.1;
+    done
+    pid=$(ps aux | grep "$localport:localhost:$remoteport $user@$server -p $sshport" | grep -v grep | awk '{print $2}')
+    inform "SSH connection up and running on process id $pid"
+}
+
+##
+# Kills all docker containers
+function dkill() {
+    for name in $(docker ps | awk '{print $NF}' | tail -n+2); do
+        inform "Stopping docker container $name"
+        docker stop $name &>/dev/null
+    done
+
+    for name in $(docker ps -a | awk '{print $NF}' | tail -n+2); do
+        inform "Deleting docker container $name"
+        docker rm $name &>/dev/null;
+    done
+}
+
+##
+# deletes all docker images
+function dkillall() {
+    dkill;
+    for id in $(docker images | awk '{print $3}' | tail -n+2); do
+        inform "Deleting docker image $id"
+        docker rmi -f $id;
+    done
+}
