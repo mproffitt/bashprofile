@@ -6,8 +6,8 @@
 # @author  Martin Proffitt <mproffitt@jitsc.co.uk>
 # @link    http://www.jitsc.co.uk/
 
-if [ "$(whoami)" = 'root' ] ; then
-    exit 0;
+if [ "$(whoami)" = 'root' ] || ! echo $- | grep -q i ; then
+    return
 fi
 reset;
 
@@ -20,8 +20,6 @@ Please wait whilst I load the profile...
 @package: BashProfile
 @author : Martin Proffitt <mproffitt@jitsc.co.uk>
 @license: GNU GPL V3 or later
-
-Please see the README for detailed instructions on using this profile.
 *******************************************************************************
 EOF
 
@@ -40,7 +38,8 @@ export HOME=$HOME;
 [ -d ${HOME}/.vim/local/bin        ] && PATH="$PATH:${HOME}/.vim/local/bin";
 [ -d ${HOME}/bin/jmeter/bin        ] && PATH="$PATH:${HOME}/bin/jmeter/bin"
 [ -d /usr/texbin                   ] && PATH="$PATH:/usr/texbin";
-[ -d "$HOME/.local/bin"            ] && PATH="$HOME/.local/bin:$PATH"
+[ -d "$HOME/.local/bin"            ] && PATH="$HOME/.local/bin:$PATH";
+[ -d /usr/local/cuda/bin           ] && PATH="$PATH:/usr/local/cuda/bin";
 
 # Windows specific paths
 if [ "$(uname -o)" = 'Cygwin' ] ; then
@@ -131,6 +130,33 @@ if which powerline-daemon &>/dev/null && [ ! -f ${HOME}/.bashprofile/function-mo
     fi
 else
     PS1='$(getPrompt)\n\[\033[00m\]\$ '
+fi
+
+# Do not run tmux if we are running cygwin - it's hellishly slow.
+if [ "$(uname -o)" != 'Cygwin' ]; then
+    # if tmux exists and is not currently running, load it.
+    if which tmux &>/dev/null && ! ps aux | grep -v grep | grep -q tmux; then
+        tmux;
+    fi
+fi
+
+SSH_ENV="$HOME/.keychain/${HOSTNAME}-sh"
+function startAgent() {
+    inform "Initialising new SSH agent..."
+    for file in $(ls ${HOME}/.ssh | grep rsa | grep -v '\.pub$'); do
+        /usr/bin/keychain ${HOME}/.ssh/$file &>/dev/null
+    done
+    source "${SSH_ENV}" > /dev/null
+}
+
+# Start the key agent before starting TMUX
+if [ -f "${SSH_ENV}" ]; then
+     source "${SSH_ENV}" > /dev/null
+     if ! ps -ef | grep -v grep | grep ${SSH_AGENT_PID} > /dev/null; then
+         startAgent;
+     fi
+else
+     startAgent;
 fi
 
 # Do not run tmux if we are running cygwin - it's hellishly slow.
