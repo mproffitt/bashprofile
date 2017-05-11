@@ -6,6 +6,10 @@
 # @author  Martin Proffitt <mproffitt@jitsc.co.uk>
 # @link    http://www.jitsc.co.uk/
 
+if [ -f /usr/local/bin/git-flow-completion.bash ]; then
+    # Source GitFlow completion
+    source /usr/local/bin/git-flow-completion.bash
+fi
 
 for file in $(ls ~/.bashprofile/completion-modules/ | grep -v 'disabled\|README') ; do
     source ~/.bashprofile/completion-modules/$file;
