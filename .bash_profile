@@ -40,9 +40,12 @@ export HOME=$HOME;
 [ -d /usr/local/gradle/bin         ] && PATH="$PATH:/usr/local/gradle/bin"
 [ -d ${HOME}/.vim/local/bin        ] && PATH="$PATH:${HOME}/.vim/local/bin"
 [ -d ${HOME}/bin/jmeter/bin        ] && PATH="$PATH:${HOME}/bin/jmeter/bin"
-[ -d /usr/texbin                   ] && PATH="$PATH:/usr/texbin";
-[ -d "$HOME/.local/bin"            ] && PATH="$HOME/.local/bin:$PATH"
+[ -d /usr/texbin                   ] && PATH="$PATH:/usr/texbin"
+[ -d ${HOME}/.local/bin            ] && PATH="$HOME/.local/bin:$PATH"
 [ -d /usr/local/cuda/bin           ] && PATH="$PATH:/usr/local/cuda/bin"
+[ -d /usr/local/go/bin             ] && PATH="$PATH:/usr/local/go/bin"
+[ -d ${HOME}/work/bin              ] && PATH="$PATH:${HOME}/work/bin"
+[ -d /opt/mssql-tools/bin          ] && PATH="$PATH:/opt/mssql-tools/bin"
 
 # Windows specific paths
 if [ "$(uname -o)" = 'Cygwin' ] ; then
@@ -60,6 +63,9 @@ export HISTCONTROL=ignoreboth
 export EDITOR=vim
 export GRADLE_HOME='/usr/local/gradle'
 export CLEWNDIR=$HOME/.vim/bundle/pyclewn/macros
+
+export GOPATH="$HOME/work"
+export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
 
 for file in $(ls $HOME/.bashprofile | grep -v install) ; do
     if [ -f $HOME/.bashprofile/$file ]  && ! echo $file | grep -q disabled ; then
@@ -165,3 +171,7 @@ fi
 [[ -d "$HOME/.rvm" ]] && [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm";
 # suppress error code from last command as we don't care if .rvm doesn't exist.
 [ $? -ne 0 ] && echo -n '';
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+export SDKMAN_DIR="${HOME}/.sdkman"
+[[ -s "${HOME}/.sdkman/bin/sdkman-init.sh" ]] && source "${HOME}/.sdkman/bin/sdkman-init.sh"
