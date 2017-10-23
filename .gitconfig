@@ -3,10 +3,10 @@
     username =
     email =
     workspace =
-    mode = develop
 [core]
     excludesfile = /home/mproffitt/.gitignore
     whitespace=fix,-indent-with-non-tab,trailing-space,cr-at-eol
+    mode = develop
 
 [color]
     ui = auto
@@ -70,3 +70,10 @@
     stl  = stash list
     t    = tag
 
+[rerere]
+	enabled = true
+	autoupdate = true
+[merge]
+	tool = meld
+[host]
+	address = 

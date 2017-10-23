@@ -258,7 +258,7 @@ function git_requires_merge()
         branch="develop"
     fi
 
-    local fetch=$(git_do fetch origin 2>&1);
+    local fetch=$(git fetch origin 2>&1);
     if [ "$fetch" != "" ] ; then
         echo $fetch | awk -v BRANCH="$branch" '{ for (i=1; i<NF; i++) { if ($i == "origin/"$BRANCH") { exit 0; }} exit 1;}';
         # fetch may have already been done but still requires merge
