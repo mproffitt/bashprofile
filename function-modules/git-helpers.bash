@@ -7,11 +7,6 @@
 # @link    http://www.jitsc.co.uk/
 #
 
-_DEFAULT_REMOTE='esspde-gitlab.ssn.hpe.com'
-
-export _GIT_SERVER=$(git config --get host.address || echo $_DEFAULT_REMOTE)
-export _GIT_USER=$(git config --get user.username  || whoami)
-
 # Bash scripts to load
 if [ -f /usr/local/git/contrib/completion/git-completion.bash ] ; then
     source /usr/local/git/contrib/completion/git-completion.bash;
@@ -34,6 +29,12 @@ fi
 if [ -f /usr/local/bin/git-flow-completion.bash ]; then
     source /usr/local/bin/git-flow-completion.bash;
 fi
+
+if ! git config --get host.address &>/dev/null; then
+    git config --add --global host.address $(question "Please enter a default host address for repositories")
+fi
+export _GIT_SERVER=$(git config --get host.address)
+export _GIT_USER=$(git config --get user.username  || whoami)
 
 GIT_BRANCH=''
 GIT_TAGGED=$'\u2605';
@@ -92,6 +93,28 @@ function getRemoteURL()
         fi
     fi
 }
+
+function repo_online()
+{
+    origin=$(get_module_origin)
+    echo "checking $origin is online";
+    online=1;
+    which fping &>/dev/null;
+    if which fping &>/dev/null; then
+        fping -c1 $origin &>/dev/null;
+        online=$?;
+    else
+        ping -c1 $origin &>/dev/null;
+        online=$?;
+    fi
+    if [ $online -eq 1 ] ; then
+        # maybe ping is turned off - try http
+        curl -k https://$origin &>/dev/null
+        [ $? -eq 0 ] && online=0 || online=2
+    fi
+    return $online
+}
+
 
 ##
 # Used by the __ps1 to determine if the current directory is an SVN module
@@ -313,18 +336,112 @@ function checkout()
 }
 
 ##
+# Check if we're due to update from the remote
+#
+# @param bool force
+#
+# @return bool
+#
+function git_check_updates()
+{
+    local fetch_minutes=60
+    local force=1
+    for arg ; do
+        case $arg in
+            '-f')
+                force=0
+                ;;
+        esac
+    done
+    local _timestamp=$(now)
+    local _last_update=$(git config --get gitflow.core.lastupdate)
+    if [ -z $_last_update ] || [ $force -eq 0 ]; then
+        _last_update=$(timestamp $fetch_minutes 60);
+    fi
+    test $((($_timestamp - $_last_update) / 60 )) -ge $fetch_minutes
+}
+
+##
+# For git modules, updates the local cache store
+#
+function git_update_refs()
+{
+    if isGitModule && git_check_updates; then
+        # Fetch, no greater than 60 minute intervals
+        if git_check_updates; then
+            inform 'Fetching updates from remote server'
+            git fetch -p origin || { error "Could not fetch from the remote repository"; return 1; };
+            git fetch --tags    || { error "Could not fetch tags from the remote repository"; return 1; };
+            git config --add gitflow.core.lastupdate $(now);
+        fi
+    fi
+}
+
+##
 # Updates both the master and develop branches for the current module
 #
 # @return void
 #
 function update()
 {
-    if isGitModule ; then
-        branch=$(git rev-parse --abbrev-ref HEAD);
-        git checkout master;
-        git pull origin master;
-        git checkout develop;
-        git pull origin develop;
+    if isGitModule && git_check_updates; then
+        if repo_online; then
+            echo "Updating repo...";
+            git_update_refs
+            git_update_repo
+        else
+            echo "origin $origin is not available. skipping update" >&2;
+        fi
+    fi
+}
+
+##
+# Pulls in the latest changes from master/develop
+#
+# @return void
+#
+function git_update_repo()
+{
+    local stashed=1;
+    if git status | grep -v -q 'working \(directory\|tree\) clean\|nothing \(added \)\?to commit' ; then
+        git stash;
+        stashed=0;
+    fi
+
+    local oldBranch=$(git rev-parse --abbrev-ref HEAD);
+    git checkout master;
+    git pull origin master
+    if git branch -r | grep -q develop; then
+        git checkout develop
+        git pull origin develop
+    fi
+
+    git checkout $oldBranch;
+    case "$(cut -d/ -f1 <<<$oldBranch)" in
+        'master')
+            ;;
+        'develop')
+            local answer="$(query 'Do you want to [r]ebase or [m]erge develop against master? (s = skip)' r m s)"
+            case "$answer" in
+                'r')
+                    git rebase master
+                    ;;
+                'm')
+                    git merge master
+                    ;;
+                's')
+                    ;;
+            esac
+            ;;
+        'feature')
+            git rebase develop
+            ;;
+        *)
+            git rebase master
+            ;;
+    esac
+    if [ $stashed -eq 0 ] ; then
+        git stash pop;
     fi
 }
 

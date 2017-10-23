@@ -8,10 +8,6 @@
 #
 
 ##
-# Alias for the goto function
-alias go='goto';
-
-##
 # Alias for linking for goto
 alias gl='goto_link';
 

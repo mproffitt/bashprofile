@@ -60,40 +60,6 @@ function findinfile ()
 }
 
 ##
-# Pulls in the latest changes from master/develop
-#
-# @return void
-#
-function update ()
-{
-    local stashed=-1;
-    if [ "$(git status | grep 'working directory clean\|nothing added to commit')" != "" ] ; then
-        git stash;
-        stashed=0;
-    fi
-
-    local oldBranch=$(git rev-parse --abbrev-ref HEAD);
-    if [ "$oldBranch" != "master" ] ; then
-        git checkout master;
-    fi
-
-    git fetch origin && git merge origin master;
-    if [ "$oldBranch" != "master" ] ; then
-        git checkout $oldBranch;
-        echo "Do you want to merge master into the current branch ($oldBranch)? \c";
-        read merge;
-
-        if [ "$merge" = "y" ] ; then
-            git merge origin master;
-        fi
-    fi
-
-    if [ $stashed -eq 0 ] ; then
-        git stash pop;
-    fi
-}
-
-##
 # Sets a notification using the Growl notification system on mac
 #
 # @param string message The message to notify with
@@ -408,3 +374,35 @@ function dkillall() {
         docker rmi -f $id;
     done
 }
+
+##
+# Sets the proxy server according to the settings in ~/.bashprofile/private-modules/proxy.bash
+function proxy()
+{
+    source ~/.bashprofile/private-modules/proxy.bash
+}
+
+##
+# Unsets the proxy server
+function noproxy()
+{
+    unset http_proxy
+    unset https_proxy
+    unset no_proxy
+    unset HTTP_PROXY
+    unset HTTPS_PROXY
+    unset NO_PROXY
+}
+
+function gvc()
+{
+    if [ ! -f variables.tf ] && [ ! -d .git ]; then
+        echo "This function must be executed from terraform repo root" >&2
+        return 1
+    fi
+    GOVC_URL="https://$(grep -A1 vsphere_server variables.tf | grep default | awk '{print $NF}' | sed 's/"//g')/sdk" \
+    GOVC_USERNAME="$(grep vsphere_user terraform.tfvars | awk '{print $NF}' | sed 's/"//g')" \
+    GOVC_PASSWORD="$(grep vsphere_password terraform.tfvars | awk '{print $NF}' | sed 's/"//g')" \
+    govc "$@"
+}
+

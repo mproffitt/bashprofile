@@ -50,10 +50,15 @@ _GOTO_PATH="$HOME/.config/goto"
 #
 function goto_link()
 {
-    cwd=$(pwd)
-    cd $1
+    local link=$1
+    local cwd=$(pwd)
+    if [ -z $link ] ; then
+        link=$(pwd)
+    fi
+    cd $link
+    # if this is a git or svn module, go to its root directory
     moduleroot &>/dev/null;
-    dirname=$(basename $(pwd))
+    local dirname=$(basename $(pwd))
     if [ ! -f "$_GOTO_PATH/$dirname" ]; then
         inform "Linking $dirname in $_GOTO_PATH";
         ln -s $(pwd) "$_GOTO_PATH/"
@@ -215,34 +220,7 @@ function goto()
         location=$(readlink -e $_GOTO_PATH/$location)
         _load_sshfs $location
         cd $location &>/dev/null;
-
-        if [ -d .git ]; then
-            origin=$(get_module_origin)
-            echo "checking $origin is online";
-            online=1;
-            which fping &>/dev/null;
-            if [ $? -ne 1 ] ; then
-                fping -c1 $origin &>/dev/null;
-                online=$?;
-            else
-                ping -c1 $origin &>/dev/null;
-                online=$?;
-            fi
-            if [ $online -eq 1 ] ; then
-                # maybe ping is turned off - try http
-                curl -k https://$origin &>/dev/null
-                [ $? -eq 0 ] && online=0 || online=2
-            fi
-
-            if [ $online -eq 0 ] ; then
-                echo "Updating repo...";
-                git fetch -p origin;
-                clear;
-            else
-                echo "origin $origin is not available. skipping update" >&2;
-                clear;
-            fi
-        fi
+        update
     ;;
     esac
 }

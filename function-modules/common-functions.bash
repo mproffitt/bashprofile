@@ -130,6 +130,23 @@ function query()
 }
 
 ##
+# Ask a basic question with no options
+#
+# @param string message
+#
+function question()
+{
+    local message="$@"
+    shift
+    inform -n "$message > "
+    read answer
+    if [ -z $answer ]; then
+        answer=$(question "$message")
+    fi
+    echo $answer
+}
+
+##
 # executes the given command printing the command to be executed
 #
 # @param string
@@ -192,3 +209,31 @@ function pad ()
         echo -n "$2${BACK:${#2}}"
     fi
 }
+
+##
+# Gets a timestamp for n days ago
+#
+# @param int lessDays The number of days in the past to read
+# @param int sec      The length of a day (default 86400)
+#
+# @return LAST_EXIT_STATUS
+#
+timestamp() {
+    lessDays=$1;
+    sec=86400;
+    [ ! -z $2 ] && sec=$2
+    date=$(now);
+    echo $((date - (sec * lessDays)));
+}
+
+##
+# Gets a timestamp for now
+#
+now() {
+    if [ "$(uname)" = "Darwin" ] ; then
+        echo $(date -j +%s);
+    else
+        echo $(date --utc +%s);
+    fi
+}
+

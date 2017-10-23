@@ -81,3 +81,19 @@ alias rvbnet='vboxmanage hostonlyif vboxnet0 --ip 192.168.56.1'
 ##
 # Alias to link resolv.conf to /run/resolvconf/resolv.conf
 alias rescon='sudo ln -sf /run/resolvconf/resolv.conf /etc/resolv.conf && ls -al /etc/resolv.conf'
+
+##
+# alias for ls
+alias ls='ls --color=auto'
+
+##
+# alias for proxy
+alias p='proxy'
+
+##
+# alias for noproxy
+alias np='noproxy'
+
+##
+# Create a random 20 character password and add to clipboard
+alias pw='echo -n $(pwgen -sn 20 1) | xclip -sel clip'
