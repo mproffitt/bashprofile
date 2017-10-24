@@ -1,8 +1,9 @@
 [user]
-    name =
-    username =
-    email =
+    name      =
+    email     =
     workspace =
+    mode      =
+    apikey    =
 [core]
     excludesfile = /home/mproffitt/.gitignore
     whitespace=fix,-indent-with-non-tab,trailing-space,cr-at-eol
@@ -13,18 +14,16 @@
 
 [color "branch"]
     current = yellow reverse
-    local = yellow
-    remote = green
-
+    local   = yellow
+    remote  = green
 [color "diff"]
     meta = yellow bold
     frag = magenta bold
-    old = red bold
-    new = green bold
-
+    old  = red bold
+    new  = green bold
 [color "status"]
-    added = yellow
-    changed = green
+    added     = yellow
+    changed   = green
     untracked = cyan
 
 [color]
@@ -76,4 +75,8 @@
 [merge]
 	tool = meld
 [host]
-	address = 
+	address =
+
+[gitflow "core"]
+    say = 1
+    voice = Trinoids

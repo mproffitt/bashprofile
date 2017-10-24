@@ -18,10 +18,12 @@
 #   3. Full block.   - Commands can block the whole queue until they have completed.
 #
 export PROCESSORS=$(grep -c processor /proc/cpuinfo)
-export THREAD_SLEEP=1
+export THREAD_SLEEP=0.05
 export QUEUE=()
 export PROCESSES=()
 export STATUSES=()
+export ORIGINAL_STATUSES=()
+export RUNNING=()
 export ACTIVE=0
 export MANAGER_RUNNING=1
 
@@ -41,11 +43,29 @@ function reset_queue()
         done
     fi
 
+    unset QUEUE
+    unset PROCESSES
+    unset STATUSES
+    unset ORIGINAL
+    unset RUNNING
+
     export QUEUE=()
     export PROCESSES=()
     export STATUSES=()
+    export ORIGINAL=()
+    export RUNNING=()
     export ACTIVE=0
 }
+
+function restart_queue()
+{
+    STATUSES=(${ORIGINAL[@]})
+    export STATUSES
+    unset PROCESSES
+    export PROCESSES=()
+    process_queue
+}
+
 
 ##
 # Print the contents of the queue
@@ -77,56 +97,63 @@ function print_queue()
 #
 function queue()
 {
-    if [ ${#@} -eq 0 ] ; then
-        inform "Usage: queue '<command>' [<logfile>] [[block|waitfor]=[true|false]]";
-        inform 'commands must be quoted whilst logfile and blocking is optional.'
-        inform 'call `process_queue` to execute.'
-        return 1
-    fi
-
     local command=''
     local logfile=''
-    local block=''
+    local block=false
+    local waitfor=-1
+    local wait=false
     local push=false
 
-    while [ ${#@} -ge 1 ]; do
+    while [ ${#@} -gt 0 ]; do
         argument=$1
+        case $argument in
+            '-LF')
+                logfile=$2
+                shift
+                ;;
+            *)
+                case "$(cut -d\= -f1 <<<$argument)" in
+                    'block')
+                        [ "$(cut -d\= -f2 <<<$argument | tr [:upper:] [:lower:])" = 'true' ] && block=true
+                        ;;
+                    'waitfor')
+                        waitfor=$(cut -d\= -f2 <<<$argument | tr [:upper:] [:lower:])
+                        wait=true
+                        ;;
+                    'push')
+                        [ "$(cut -d\= -f2 <<<$argument | tr [:upper:] [:lower:])" = 'true' ] && push=true
+                        ;;
+                    *)
+                        command="$command $argument"
+                        ;;
+                esac
+        esac
         shift
-        flagtype=$(cut -d\= -f1 <(echo $argument))
-        if [ "${flagtype}" = 'block' ] || [ "$flagtype" = 'waitfor' ] ; then
-            block=$argument
-        elif [ "${flagtype}" = 'push' ] && [ "$(sed 's/.*=//;' <(echo $argument))" = 'true' ]; then
-            push=true
-        elif which $(awk '{print $1}' <(echo $argument)) &>/dev/null ; then
-            command="$argument"
-        elif typeset -f $(awk '{print $1}' <(echo $argument)) &>/dev/null; then
-            command="$argument"
-        else
-            logfile="$argument"
-        fi
     done
 
-    if $push; then
-        QUEUE=("$command^$logfile" "${QUEUE[@]}")
-    else
-        QUEUE+=("$command^$logfile")
+    local status='Ready'
+    if $block && $wait; then
+        status="Waiting=$waitfor|Block"
+    elif $block; then
+        status='Block'
+    elif $wait; then
+        status="Waiting=$waitfor"
     fi
 
-    status='Ready'
-    if [ ! -z "$block" ] ; then
-        if [ "$(cut -d\= -f1 <(echo $block))" = 'block' ] && [ "$(sed 's/.*=//;' <(echo $block))" = 'true' ]; then
-            status='Block'
-        elif [ "$(cut -d\= -f1 <(echo $block))" = 'waitfor' ]; then
-            pid=$(sed 's/.*=//' <(echo $block))
-            [ "$pid" = 'last' ] && pid=$(expr ${#STATUSES[@]} - 1)
-            status="Waiting for ${pid}"
-        fi
-    fi
 
     if $push; then
+        _reindex_existing_waits
+        QUEUE=("$command~~~$logfile" "${QUEUE[@]}")
         STATUSES=("$status" "${STATUSES[@]}")
+        if [ ${#ORIGINAL[@]} -ne 0 ] ; then
+            ORIGINAL=("$status" "${ORIGINAL[@]}")
+        fi
     else
+        QUEUE+=("$command~~~$logfile")
         STATUSES+=("$status")
+        if [ ${#ORIGINAL[@]} -ne 0 ] ; then
+            ORIGINAL+=("$status")
+        fi
     fi
 
     export QUEUE
@@ -141,6 +168,7 @@ function queue()
 # @see `process_manager::queue`
 function queue_push()
 {
+    export STATUSES
     queue "$@" "push=true"
     return $?
 }
@@ -152,6 +180,9 @@ function queue_push()
 #
 function process_queue()
 {
+    ORIGINAL=(${STATUSES[@]})
+    export ORIGINAL
+
     while true ; do
         export MANAGER_RUNNING=0
         for (( i=0; i < ${#QUEUE[@]}; i++ )); do
@@ -160,17 +191,52 @@ function process_queue()
             fi
 
             if [ $ACTIVE -lt ${PROCESSORS} ] ; then
-                if [ "${STATUSES[$i]}" = 'Block' ] ; then
-                    _exec $i
-                    block $i
-                elif [[ "${STATUSES[$i]}" =~ Waiting.* ]]; then
-                    local index=$(awk '{print $NF}' <(echo ${STATUSES[$i]}))
-                    if [ "${STATUSES[$index]}" = 'Complete' ] && ! kill -0 ${PROCESSES[$index]} &>/dev/null; then
+                case "$(cut -d= -f1 <<<${STATUSES[$i]})" in
+                    'Ready')
                         _exec $i
-                    fi
-                elif [ "${STATUSES[$i]}" = 'Ready' ]; then
-                    _exec $i
-                fi
+                        ;;
+                    'Block')
+                        _exec $i
+                        _block $i
+                        ;;
+                    'Waiting')
+                        local pids=($(cut -d= -f2 <<<"${STATUSES[$i]}" | cut -d\| -f1 | tr ',' ' '))
+                        local ready=true
+                        for ((j=0; j < ${#pids[@]}; j++)); do
+                            local index=${pids[$j]}
+                            case "${pids[$j]}" in
+                                'first')
+                                    index=0
+                                    ;;
+                                'last')
+                                    index=$(expr ${#STATUSES[@]} - 1)
+                                    ;;
+                                'prev')
+                                    index=$(expr $i - 1)
+                                    ;;
+                                'middle')
+                                    index=$(expr ${#STATUSES[@]} / 2)
+                                    ;;
+                                'next')
+                                    index=$(expr $i + 1)
+                                    ;;
+                            esac
+                            if [ "${STATUSES[$index]}" != 'Complete' ]; then
+                                # Don't wait for ourself
+                                if [ $index -eq $i ]; then
+                                    continue
+                                fi
+                                ready=false
+                            fi
+                        done
+                        if $ready; then
+                            _exec $i
+                            if grep -q '.*|Block$' <<<${STATUSES[$i]}; then
+                                _block $i
+                            fi
+                        fi
+                        ;;
+                esac
             fi
         done
         _monitor
@@ -207,26 +273,11 @@ function wait_for()
 }
 
 ##
-# Block until the process at queue_id is complete
-#
-# @param queue_id int
-#
-# Blocks the entire queue until a given ID has finished its execution
-#
-function block()
-{
-    queue_id=$1
-    wait_for $queue_id 'process'
-    STATUSES[$queue_id]='Complete'
-    export ACTIVE=$(expr $ACTIVE - 1)
-}
-
-##
 # Kill the entire Queue
 #
 function kill_all()
 {
-    echo "Shutting down..."
+    inform "Shutting down..."
     for (( i=0; i < ${#STATUSES[@]}; i++ )); do
         if [ "${STATUSES[$i]}" = 'Running' ] ; then
             _kill_tree ${PROCESSES[$i]}
@@ -235,13 +286,40 @@ function kill_all()
         fi
     done
     [ -f /tmp/procpid ] && rm /tmp/procpid
-    echo "Done"
+    inform "Done"
 }
 
 ##
 # Private methods
 # ===============
 #
+
+##
+# Iterate over all statuses when pushing elements on top of the queue and update the indexes
+#
+function _reindex_existing_waits()
+{
+    # Update location of all waiting statuses to point at new IDs
+    for ((i=0; i < ${#STATUSES[@]}; i++)); do
+        if [ "$(cut -d= -f1 <<<${STATUSES[$i]})" = 'Waiting' ]; then
+            pids=($(cut -d= -f2 <<<"${STATUSES[$i]}" | cut -d\| -f1 | tr ',' ' '))
+            new_pids='Waiting='
+            for pid in ${pids[@]}; do
+                if [[ $pid =~ [0-9]+ ]]; then
+                    new_pids="$new_pids,$(expr $pid + 1)"
+                else
+                    new_pids="$new_pids,$pid"
+                fi
+            done
+            if [ "$(cut -d\| -f2 <<<${STATUSES[$i]})" = 'Block' ]; then
+                new_pids="$new_pids|Block"
+            fi
+            new_pids=$(sed 's/=,/=/' <<<$new_pids)
+            warn "Changing ${STATUSES[$i]} to ${new_pids}"
+            STATUSES[$i]=$new_pids
+        fi
+    done
+}
 
 ##
 # Monitor the queue and mark any completed processes
@@ -253,7 +331,14 @@ function _monitor()
     for (( i=0; i < ${#STATUSES[@]}; i++ )); do
         if [ ! -z ${PROCESSES[$i]} ] && ! kill -0 ${PROCESSES[$i]} &>/dev/null; then
             STATUSES[$i]='Complete'
-            export ACTIVE=$(expr $ACTIVE - 1)
+            RUNNING=($(
+                for ((j=0; j < ${#RUNNING[@]}; j++)); do
+                    if [ ! -z ${RUNNING[$j]} ] && [ $i -ne ${RUNNING[$j]} ]; then
+                        echo ${RUNNING[$j]}
+                    fi
+                done
+            ))
+            export ACTIVE=${#RUNNING[@]}
         fi
     done
     export STATUSES
@@ -268,6 +353,7 @@ function _queue_complete()
 {
     for (( i=0; i < ${#STATUSES[@]}; i++)); do
         if [ "${STATUSES[$i]}" != 'Complete' ] ; then
+            debug "Waiting for $i to complete (status = ${STATUSES[$i]})"
             return 1
         fi
     done
@@ -283,8 +369,8 @@ function _queue_complete()
 function _exec()
 {
     local queue_id=$1
-    local command=$(cut -d^ -f1 <(echo ${QUEUE[$queue_id]}))
-    local logfile=$(cut -d^ -f2 <(echo ${QUEUE[$queue_id]}))
+    local command=$(sed 's/\(.*\)~~~.*/\1/' <<<${QUEUE[$queue_id]})
+    local logfile=$(sed 's/.*~~~\(.*\)/\1/' <<<${QUEUE[$queue_id]})
 
     if [ ! -z $logfile ]; then
         logfile="${queue_id}_${logfile}"
@@ -296,11 +382,11 @@ function _exec()
         if [ ! -f $logfile ] ; then
             touch $logfile
         fi
-        echo "Triggering process ${queue_id} '${command}'" | tee -a $logfile
+        inform "Triggering process ${queue_id} '${command}'" | tee -a $logfile
         eval "((${command}) 2>&1 | tee -a ${logfile}) &"
         RETURN_CODES[$queue_id]=$?
     else
-        echo "Triggering process ${queue_id} '${command}'"
+        inform "Triggering process ${queue_id} '${command}'"
         eval "(${command}) &"
         RETURN_CODES[$queue_id]=$?
     fi
@@ -308,12 +394,29 @@ function _exec()
     PROCESSES[$queue_id]=$pid
     STATUSES[$queue_id]='Running'
     ACTIVE=$(expr $ACTIVE + 1)
+    RUNNING[$ACTIVE]=$queue_id
 
     export PROCESSES
     export STATUSES
     export ACTIVE
+    export RUNNING
     export RETURN_CODES
     return $pid
+}
+
+##
+# Block until the process at queue_id is complete
+#
+# @param queue_id int
+#
+# Blocks the entire queue until a given ID has finished its execution
+#
+function _block()
+{
+    local queue_id=$1
+    wait_for $queue_id 'process'
+    STATUSES[$queue_id]='Complete'
+    export ACTIVE=$(expr $ACTIVE - 1)
 }
 
 ##
@@ -359,3 +462,29 @@ function _kill_tree()
 
 trap "kill_all" EXIT
 reset_queue
+
+
+function test_queue()
+{
+    inform "Populating QUEUE"
+    for ((i=0; i < 100; i++)); do
+        command="echo 'hello world $i' && sleep 0.5";
+        if [ $i -eq 18 ]; then
+            queue $command waitfor=16
+        elif [ $i -eq 5 ]; then
+            queue $command waitfor=10,middle,last push=true
+        elif [ $i -eq 38 ] ; then
+            queue $command waitfor=1,5,27
+        elif [ $i -eq 74 ]; then
+            queue $command waitfor=12,37,44 block=true
+        elif [ $i -eq 10 ]; then
+            queue $command block=true
+        elif [ $i -eq 50 ]; then
+            queue $command push=true
+        else
+            queue $command
+        fi
+    done
+    inform "Done populating"
+    process_queue
+}
