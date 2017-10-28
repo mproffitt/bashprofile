@@ -60,11 +60,12 @@ from.
 This profile contains a process manager bringing multi-processing to the shell.
 
 #### Functions:
-```queue``` Add a command to the queue
-```process``` Trigger the process manager
-```restart_queue```` Restart the queue
-```reset_queue``` Clears the current queue
-```print queue``` Prints the current queue as "ID - STATUS: COMMAND"
+
+* ```queue``` Add a command to the queue
+* ```process``` Trigger the process manager
+* ```restart_queue```` Restart the queue
+* ```reset_queue``` Clears the current queue
+* ```print queue``` Prints the current queue as "ID - STATUS: COMMAND"
 
 When adding functionality to the queue, one or more options may be provided:
 
