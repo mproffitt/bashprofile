@@ -90,7 +90,7 @@ function restart_queue()
 function print_queue()
 {
     for (( i=0; i < ${#QUEUE[@]}; i++ )); do
-        echo "${STATUSES[$i]}: $(cut -d^ -f1 <(echo ${QUEUE[$i]}))"
+        echo "$i - ${STATUSES[$i]}: $(sed 's/\(.*\)~~~.*/\1/' <<<${QUEUE[$i]})"
     done
 }
 

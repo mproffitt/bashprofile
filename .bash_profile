@@ -68,7 +68,7 @@ export CLEWNDIR=$HOME/.vim/bundle/pyclewn/macros
 export GOPATH="$HOME/work"
 export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
 
-for file in $(ls $HOME/.bashprofile | grep -v install) ; do
+for file in $(ls $HOME/.bashprofile | grep -v 'install\|README') ; do
     if [ -f $HOME/.bashprofile/$file ]  && ! echo $file | grep -q disabled ; then
         source $HOME/.bashprofile/$file;
     fi
