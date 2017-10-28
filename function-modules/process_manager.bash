@@ -22,10 +22,13 @@ export THREAD_SLEEP=0.05
 export QUEUE=()
 export PROCESSES=()
 export STATUSES=()
-export ORIGINAL_STATUSES=()
+export ORIGINAL=()
+export RETURN_CODES=()
 export RUNNING=()
 export ACTIVE=0
 export MANAGER_RUNNING=1
+export EXPORTED_QUEUE=''
+export USE_FIFO=true
 
 ##
 # Reset the queue back to a clean state.
@@ -42,30 +45,41 @@ function reset_queue()
             sleep $THREAD_SLEEP
         done
     fi
-
     unset QUEUE
     unset PROCESSES
     unset STATUSES
+    unset RETURN_CODES
     unset ORIGINAL
     unset RUNNING
+    unset EXPORTED_QUEUE
 
     export QUEUE=()
     export PROCESSES=()
     export STATUSES=()
+    export RETURN_CODES=()
     export ORIGINAL=()
     export RUNNING=()
     export ACTIVE=0
+    export EXPORTED_QUEUE=''
 }
 
 function restart_queue()
 {
-    STATUSES=(${ORIGINAL[@]})
-    export STATUSES
+    local args=''
+    if ! $USE_FIFO; then
+        args='-fg'
+    fi
     unset PROCESSES
     export PROCESSES=()
-    process_queue
+    STATUSES=("${ORIGINAL[@]}")
+    export STATUSES
+    for (( i=0; i < ${#STATUSES[@]}; i++ )); do
+        RETURN_CODES[$i]=-1
+    done
+    export RETURN_CODES
+    print_queue
+    process $args
 }
-
 
 ##
 # Print the contents of the queue
@@ -140,7 +154,6 @@ function queue()
         status="Waiting=$waitfor"
     fi
 
-
     if $push; then
         _reindex_existing_waits
         QUEUE=("$command~~~$logfile" "${QUEUE[@]}")
@@ -158,6 +171,7 @@ function queue()
 
     export QUEUE
     export STATUSES
+    export ORIGINAL
     export ACTIVE
     return $(expr ${#QUEUE[@]} - 1)
 }
@@ -174,15 +188,87 @@ function queue_push()
 }
 
 ##
+# Triggers the process manager
+#
+function process()
+{
+    export USE_FIFO=true
+    local foreground=false
+    for arg; do
+        case "$arg" in
+            '-fg')
+                foreground=true
+        esac
+    done
+    for (( i=0; i < ${#STATUSES[@]}; i++ )); do
+        RETURN_CODES[$i]=-1
+        EXPORTED_QUEUE="$EXPORTED_QUEUE%%%${QUEUE[$i]}"
+    done
+    export RETURN_CODES
+    export EXPORTED_QUEUE
+
+    if $foreground; then
+        export USE_FIFO=false
+        _process_queue
+        return $?
+    fi
+    _process_queue &>/dev/null &
+    ${HOME}/.bashprofile/bin/processview.py
+}
+
+##
+# Wait for a given process to complete
+#
+# @param pid     int | 'last'
+# @param pidtype string ['queue' | 'process'] Which pool to check for $pid
+#
+# Hold the current pool until the process is completed
+function wait_for()
+{
+    local pid=$1
+    local pidtype=$2
+    if [ -z $pidtype ] || [ "$pidtype" = 'queue' ] ; then
+        [ "$pid" = 'last' ] && pid=$(expr ${#STATUSES[@]} - 1)
+        until [ "${STATUSES[$pid]}" = 'Complete' ] ; do
+            sleep $THREAD_SLEEP
+        done
+    elif [ "$pidtype" = 'process' ] ; then
+        [ "${pid}" = 'last' ] && pid=$(_find_last_triggered_process) || pid=${PROCESSES[$pid]}
+        until ! kill -0 $pid &>/dev/null ; do
+            sleep $THREAD_SLEEP
+        done
+    fi
+}
+
+##
+# Kill the entire Queue
+#
+function kill_all()
+{
+    inform "Shutting down..."
+    for (( i=0; i < ${#STATUSES[@]}; i++ )); do
+        if [ "${STATUSES[$i]}" = 'Running' ] ; then
+            _kill_tree ${PROCESSES[$i]}
+        elif [ "${STATUSES[$i]}" != 'Complete' ]; then
+            STATUSES[$i]='Complete'
+        fi
+    done
+    inform "Done"
+}
+
+##
 # Start the queue and execute any commands contained within it
 #
 # Queue status can be tested against the MANAGER_RUNNING environment variable
 #
-function process_queue()
+function _process_queue()
 {
     ORIGINAL=(${STATUSES[@]})
     export ORIGINAL
-
+    sleep 2
+    if $USE_FIFO; then
+        exec 3<>/dev/tcp/127.0.0.1/8888
+    fi
     while true ; do
         export MANAGER_RUNNING=0
         for (( i=0; i < ${#QUEUE[@]}; i++ )); do
@@ -249,52 +335,6 @@ function process_queue()
 }
 
 ##
-# Wait for a given process to complete
-#
-# @param pid     int | 'last'
-# @param pidtype string ['queue' | 'process'] Which pool to check for $pid
-#
-# Hold the current pool until the process is completed
-function wait_for()
-{
-    local pid=$1
-    local pidtype=$2
-    if [ -z $pidtype ] || [ "$pidtype" = 'queue' ] ; then
-        [ "$pid" = 'last' ] && pid=$(expr ${#STATUSES[@]} - 1)
-        until [ "${STATUSES[$pid]}" = 'Complete' ] ; do
-            sleep $THREAD_SLEEP
-        done
-    elif [ "$pidtype" = 'process' ] ; then
-        [ "${pid}" = 'last' ] && pid=$(_find_last_triggered_process) || pid=${PROCESSES[$pid]}
-        until ! kill -0 $pid &>/dev/null ; do
-            sleep $THREAD_SLEEP
-        done
-    fi
-}
-
-##
-# Kill the entire Queue
-#
-function kill_all()
-{
-    inform "Shutting down..."
-    for (( i=0; i < ${#STATUSES[@]}; i++ )); do
-        if [ "${STATUSES[$i]}" = 'Running' ] ; then
-            _kill_tree ${PROCESSES[$i]}
-        elif [ "${STATUSES[$i]}" != 'Complete' ]; then
-            STATUSES[$i]='Complete'
-        fi
-    done
-    [ -f /tmp/procpid ] && rm /tmp/procpid
-    inform "Done"
-}
-
-##
-# Private methods
-# ===============
-#
-
-##
 # Iterate over all statuses when pushing elements on top of the queue and update the indexes
 #
 function _reindex_existing_waits()
@@ -328,6 +368,8 @@ function _reindex_existing_waits()
 #
 function _monitor()
 {
+    local EXPORTED_STATUSES=''
+    local EXPORTED_RETURN_CODES=''
     for (( i=0; i < ${#STATUSES[@]}; i++ )); do
         if [ ! -z ${PROCESSES[$i]} ] && ! kill -0 ${PROCESSES[$i]} &>/dev/null; then
             STATUSES[$i]='Complete'
@@ -340,8 +382,13 @@ function _monitor()
             ))
             export ACTIVE=${#RUNNING[@]}
         fi
+        EXPORTED_STATUSES="${EXPORTED_STATUSES};${STATUSES[$i]}"
+        EXPORTED_RETURN_CODES="${EXPORTED_RETURN_CODES};${RETURN_CODES[$i]}"
     done
     export STATUSES
+    if $USE_FIFO; then
+        echo "$EXPORTED_STATUSES|||$EXPORTED_RETURN_CODES" >&3
+    fi
 }
 
 ##
@@ -463,7 +510,8 @@ function _kill_tree()
 trap "kill_all" EXIT
 reset_queue
 
-
+##
+# Simple test for the queue mechanism
 function test_queue()
 {
     inform "Populating QUEUE"
@@ -477,8 +525,8 @@ function test_queue()
             queue $command waitfor=1,5,27
         elif [ $i -eq 74 ]; then
             queue $command waitfor=12,37,44 block=true
-        elif [ $i -eq 10 ]; then
-            queue $command block=true
+        elif [ $i -eq 10 ] || [ $i -eq 95 ]; then
+            queue "echo 'hello world $i' && sleep 10" block=true
         elif [ $i -eq 50 ]; then
             queue $command push=true
         else
@@ -486,5 +534,5 @@ function test_queue()
         fi
     done
     inform "Done populating"
-    process_queue
+    process $@
 }

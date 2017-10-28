@@ -31,7 +31,7 @@ EOF
 export HOME=$HOME;
 
 # add application specific <bin> path
-[ -d ${HOME}/bin                   ] && PATH="$PATH:${HOME}/bin"
+[ -d ${HOME}/bin                   ] && PATH="${HOME}/bin:$PATH"
 [ -d ${HOME}/src/ZendFramework/bin ] && PATH="$PATH:${HOME}/src/ZendFramework/bin"
 [ -d /git/repos/GitTools/bin       ] && PATH="$PATH:${HOME}/git/repos/GitTools/bin"
 [ -d /var/lib/gems/1.8/bin         ] && PATH="$PATH:/var/lib/gems/1.8/bin"
@@ -46,6 +46,7 @@ export HOME=$HOME;
 [ -d /usr/local/go/bin             ] && PATH="$PATH:/usr/local/go/bin"
 [ -d ${HOME}/work/bin              ] && PATH="$PATH:${HOME}/work/bin"
 [ -d /opt/mssql-tools/bin          ] && PATH="$PATH:/opt/mssql-tools/bin"
+[ -d ${HOME}/.bashprofile/bin      ] && PATH="$PATH:${HOME}/.bashprofile/bin"
 
 # Windows specific paths
 if [ "$(uname -o)" = 'Cygwin' ] ; then
@@ -57,7 +58,7 @@ export PATH=$PATH
 # Setup the terminal
 export CLICOLOR=1
 export LSCOLORS=GxFxCxDxBxegedabagacad
-export HISTSIZE=1000
+export HISTSIZE=10000
 export HISTFILESIZE=2000
 export HISTCONTROL=ignoreboth
 export EDITOR=vim
