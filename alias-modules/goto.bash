@@ -3,8 +3,8 @@
 # Contains aliases for goto functionality
 #
 # @package profile
-# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
-# @link    http://www.jitsc.co.uk/
+# @author  Martin Proffitt <mproffitt@choclab.net>
+# @link    http://www.choclab.net/
 #
 
 ##

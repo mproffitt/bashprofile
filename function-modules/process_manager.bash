@@ -1,8 +1,8 @@
 ##
 # Process Manager script
 #
-# @Author: Martin Proffitt <mproffitt@jitsc.co.uk>
-# @Website: www.jitsc.co.uk
+# @Author: Martin Proffitt <mproffitt@choclab.net>
+# @Website: www.choclab.net
 # @license: GNU GPL v3 or later
 #
 # The purpose of this script is to provide multi-processing capabilities to

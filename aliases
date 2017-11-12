@@ -3,17 +3,12 @@
 # Common aliases
 #
 # @package profile
-# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
-# @link    http://www.jitsc.co.uk/
+# @author  Martin Proffitt <mproffitt@choclab.net>
+# @link    http://www.choclab.net/
 #
-
 for file in $(ls ~/.bashprofile/alias-modules/ | grep -v 'disabled\|README') ; do
     source ~/.bashprofile/alias-modules/$file;
 done
-
-##
-# Reload bash_profile
-alias resource='clear && source ~/.bash_profile';
 
 ##
 # Show all defined functions
@@ -44,7 +39,7 @@ fi
 
 ##
 # Burp
-alias burp='nohup java -jar -Xmx1g /home/mproffitt/apps/burp.jar &>/dev/null &'
+alias burp="nohup java -jar -Xmx1g ${HOME}/apps/burp.jar &>/dev/null &"
 
 ##
 # onto
@@ -96,4 +91,8 @@ alias np='noproxy'
 
 ##
 # Create a random 20 character password and add to clipboard
-alias pw='echo -n $(pwgen -sn 20 1) | xclip -sel clip'
+alias pw='echo -n $(pwgen -synr \`\"\\ 20 1) | xclip -sel clip'
+
+alias dxccon="sudo bash -c 'deveng d; deveng'"
+alias dxcdis="sudo bash -c 'deveng d'"
+

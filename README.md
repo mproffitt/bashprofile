@@ -1,9 +1,20 @@
 # Martins BASH Profile
+
 This repo contains the functionality for my bash profile
 
 ## Installation
+To install this repo, first, clone it to your local environment. The profile needs to sit in your home folder in a
+hidden folder called .bashprofile
+
     git clone git@github.com:mproffitt/bashprofile.git ~/.bashprofile
+
+### Initialisation method 1
+
     cp ~/.bashprofile/.bash_profile ~/
+
+### Initialisation method 2
+
+    echo "source .bashprofile/.bash_profile" >> ~/,bash_profile
 
 ## About
 Every developer on Linux has a bash profle. Whether you use it or not, one exists. Most my contain minor tweaks to the
@@ -54,7 +65,8 @@ The sshfs.config file should, in this instance contain the address of the server
 from.
 
 #### Example
-127.0.0.1:/home/mproffitt
+
+    127.0.0.1:/home/mproffitt
 
 ### Process management
 This profile contains a process manager bringing multi-processing to the shell.
@@ -63,9 +75,9 @@ This profile contains a process manager bringing multi-processing to the shell.
 
 * ```queue``` Add a command to the queue
 * ```process``` Trigger the process manager
-* ```restart_queue```` Restart the queue
+* ```restart_queue``` Restart the queue
 * ```reset_queue``` Clears the current queue
-* ```print queue``` Prints the current queue as "ID - STATUS: COMMAND"
+* ```print_queue``` Prints the current queue as "ID - STATUS: COMMAND"
 
 When adding functionality to the queue, one or more options may be provided:
 
@@ -83,4 +95,5 @@ When the GUI is used, it works by backgrounding the entire process in a subshell
 undisturbed in the current shell and may be triggered time and again by just calling 'process' without needing to
 restart in between.
 
-A test function is provided on the queue module. This can be triggered with `test_queue`
+A test function is provided on the queue module. This can be triggered with ```test_queuei```.
+

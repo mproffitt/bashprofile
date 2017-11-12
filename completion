@@ -3,8 +3,8 @@
 # Load bash completion helpers
 #
 # @package profile
-# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
-# @link    http://www.jitsc.co.uk/
+# @author  Martin Proffitt <mproffitt@choclab.net>
+# @link    http://www.choclab.net/
 
 if [ -f /usr/local/bin/git-flow-completion.bash ]; then
     # Source GitFlow completion

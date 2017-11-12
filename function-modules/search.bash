@@ -3,8 +3,8 @@
 # Adds dictionary search functionality to a bash shell.
 #
 # @package profile
-# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
-# @link    http://www.jitsc.co.uk/#
+# @author  Martin Proffitt <mproffitt@choclab.net>
+# @link    http://www.choclab.net/#
 #
 # This script uses rhymezone.com to search for rhymes and definitions of words.
 # It was developed to aid in the writing of poetic verse because I prefer to avoid

@@ -3,19 +3,30 @@
 # Misc. functions and Load helper functions
 #
 # @package profile
-# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
-# @link    http://www.jitsc.co.uk/
+# @author  Martin Proffitt <mproffitt@choclab.net>
+# @link    http://www.choclab.net/
 
 for file in $(ls ~/.bashprofile/function-modules | grep -v 'disabled\|README') ; do
     source ~/.bashprofile/function-modules/$file;
 done
 
 ##
+# Reload bash_profile
+#
+function resource()
+{
+    if ps aux | grep -v grep | grep powerline-daemon &>/dev/null ; then
+        kill -SIGKILL $(ps aux | grep -v grep | grep powerline-daemon | awk '{print $2}')
+    fi
+    clear && reset && source ~/.bashrc;
+}
+
+##
 # Lists all defined aliases on the current shell
 #
 # @return void
 #
-function defaliases ()
+function defaliases()
 {
     alias | sed 's/=/ /g' | cut -d\  -f2
 }
@@ -27,7 +38,7 @@ function defaliases ()
 #
 # @return void
 #
-function lss ()
+function lss()
 {
     local directory=$1;
     ls -lah $directory | grep "^l";
@@ -40,7 +51,7 @@ function lss ()
 #
 # @return void
 #
-function findinfile ()
+function findinfile()
 {
     local FILES=();
 
@@ -79,7 +90,7 @@ function growl()
 #
 # @param directory string
 #
-function ccd ()
+function ccd()
 {
     clear;
     /usr/bin/cd "$@";
@@ -352,8 +363,18 @@ function sshport()
 }
 
 ##
+# Set up a proxy to jupyter notebook running on a galaxy far far away...
+#
+function callisto()
+{
+    ssh -NTCf -L 3129:localhost:3128 -R 0.0.0.0:3129:localhost:3128 nebula.home.net
+}
+
+##
 # Kills all docker containers
-function dkill() {
+#
+function dkill()
+{
     for name in $(docker ps | awk '{print $NF}' | tail -n+2); do
         inform "Stopping docker container $name"
         docker stop $name &>/dev/null
@@ -367,7 +388,9 @@ function dkill() {
 
 ##
 # deletes all docker images
-function dkillall() {
+#
+function dkillall()
+{
     dkill;
     for id in $(docker images | awk '{print $3}' | tail -n+2); do
         inform "Deleting docker image $id"
@@ -377,6 +400,7 @@ function dkillall() {
 
 ##
 # Sets the proxy server according to the settings in ~/.bashprofile/private-modules/proxy.bash
+#
 function proxy()
 {
     source ~/.bashprofile/private-modules/proxy.bash
@@ -384,6 +408,7 @@ function proxy()
 
 ##
 # Unsets the proxy server
+#
 function noproxy()
 {
     unset http_proxy
@@ -394,15 +419,23 @@ function noproxy()
     unset NO_PROXY
 }
 
+##
+# Helper function to pull vsphere credentials from terraform file and pass to govc
+#
 function gvc()
 {
+    cd /opt/terraform
     if [ ! -f variables.tf ] && [ ! -d .git ]; then
         echo "This function must be executed from terraform repo root" >&2
+        cd -
         return 1
     fi
     GOVC_URL="https://$(grep -A1 vsphere_server variables.tf | grep default | awk '{print $NF}' | sed 's/"//g')/sdk" \
     GOVC_USERNAME="$(grep vsphere_user terraform.tfvars | awk '{print $NF}' | sed 's/"//g')" \
     GOVC_PASSWORD="$(grep vsphere_password terraform.tfvars | awk '{print $NF}' | sed 's/"//g')" \
     govc "$@"
+    rc=$?
+    cd - &>/dev/null
+    return $rc
 }
 

@@ -3,8 +3,8 @@
 # Additional git functionality
 #
 # @package profile
-# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
-# @link    http://www.jitsc.co.uk/
+# @author  Martin Proffitt <mproffitt@choclab.net>
+# @link    http://www.choclab.net/
 #
 
 # Bash scripts to load
@@ -94,6 +94,9 @@ function getRemoteURL()
     fi
 }
 
+##
+# Test to see if a git repository remote is online
+#
 function repo_online()
 {
     origin=$(get_module_origin)
@@ -538,18 +541,19 @@ function fixremote()
     if [ $? -eq 0 ] ; then
         moduleName=$(basename `pwd`);
         echo "Updating remote";
-        git remote show origin &>/dev/null;
-        if [ $? -eq 0 ] ; then
+        #git remote show origin &>/dev/null;
+        #if [ $? -eq 0 ] ; then
             git remote rm origin;
-        fi
+        #fi
         git remote add origin "$_GIT_SERVER:/$_GIT_USER/$moduleName.git";
+        git fetch -p origin
 
-        echo "Adding $_GIT_USER as remote";
-        git remote show $_GIT_USER &>/dev/null;
-        if [ $? -eq 0 ] ; then
-            git remote rm $_GIT_USER;
-        fi
-        git remote add $_GIT_USER "$_GIT_SERVER:/$_GIT_USER/$moduleName.git";
+        #echo "Adding $_GIT_USER as remote";
+        #git remote show $_GIT_USER &>/dev/null;
+        #if [ $? -eq 0 ] ; then
+        #    git remote rm $_GIT_USER;
+        #fi
+        #git remote add $_GIT_USER "$_GIT_SERVER:/$_GIT_USER/$moduleName.git";
     else
         echo "Failed to update remote";
         return 1;
@@ -558,3 +562,4 @@ function fixremote()
     echo "done";
     return 0;
 }
+

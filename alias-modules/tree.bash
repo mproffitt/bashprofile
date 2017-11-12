@@ -3,8 +3,8 @@
 # Aliases for the tree command
 #
 # @package profile
-# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
-# @link    http://www.jitsc.co.uk/
+# @author  Martin Proffitt <mproffitt@choclab.net>
+# @link    http://www.choclab.net/
 
 ##
 # Shortcut for tree -C

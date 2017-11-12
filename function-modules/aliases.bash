@@ -3,8 +3,7 @@
 # Function to print a list of all aliases defined in .bash_profile
 #
 # @package profile
-# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
-# @link    http://www.jitsc.co.uk/
+# @author  Martin Proffitt <mproffitt@choclab.net>
 #
 
 ! typeset -f inform &>/dev/null && source "$HOME/.bashprofile/function-modules/common-functions.bash"

@@ -69,7 +69,7 @@ function pyclean()
 {
     if [ ! -d .git ] ; then
         echo "Must be run from git module root" 1>&2
-        exit 1;
+        return 1;
     fi
     if [ -d cover ] ; then
         rm -rf cover;
@@ -78,3 +78,37 @@ function pyclean()
     find -P . -name *.pyc -exec rm -f {} \;
 }
 
+##
+# Upgrades all pip modules which are out of date
+#
+function pyupgrade()
+{
+    #sudo -H pip list --outdated --format=freeze | cut -d= -f1  | xargs -n1 sudo -H pip install --upgrade
+    sudo -H pip3 list --outdated --format=freeze | cut -d= -f1  | xargs -n1 sudo -H pip3 install --upgrade
+}
+
+##
+# Builds/packages the current python application
+#
+function pybuild()
+{
+    local repository=''
+    if [ ! -z "$1" ] ; then
+        case "$1" in
+            's')
+                ;&
+            'snapshots')
+                repository="$(grep '\[.*snapshots\]' ~/.pypirc | sed 's/\[//;s/\]//')"
+                ;;
+            'r')
+                ;&
+            'releases')
+                repository="$(grep '\[.*releases\]' ~/.pypirc | sed 's/\[//;s/\]//')"
+                ;;
+            *)
+                repository="$1"
+                ;;
+        esac
+    fi
+    python3 setup.py sdist upload -r $repository
+}

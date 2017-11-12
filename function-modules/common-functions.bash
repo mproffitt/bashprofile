@@ -3,8 +3,7 @@
 # Contains common functions for sharing between scripts
 #
 # @package profile
-# @author  Martin Proffitt <mproffitt@jitsc.co.uk>
-# @link    http://www.jitsc.co.uk/
+# @author  Martin Proffitt <mproffitt@choclab.net>
 #
 
 RED=$(echo $'\033[31m');
@@ -218,7 +217,8 @@ function pad ()
 #
 # @return LAST_EXIT_STATUS
 #
-timestamp() {
+function timestamp()
+{
     lessDays=$1;
     sec=86400;
     [ ! -z $2 ] && sec=$2
@@ -229,7 +229,8 @@ timestamp() {
 ##
 # Gets a timestamp for now
 #
-now() {
+function now()
+{
     if [ "$(uname)" = "Darwin" ] ; then
         echo $(date -j +%s);
     else
