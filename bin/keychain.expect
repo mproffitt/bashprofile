@@ -1,0 +1,14 @@
+#!/usr/bin/expect
+
+set KEYFILE [lindex $argv 0];
+set KEYPASS [lindex $argv 1];
+
+spawn keychain $KEYFILE
+expect {
+    "Enter passphrase for $KEYFILE:"
+    {
+        send "$KEYPASS\r"
+        exp_continue
+    }
+}
+

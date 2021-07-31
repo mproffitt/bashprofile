@@ -3,4 +3,3 @@
 for file in $(ls ~/.bashprofile/private-modules | grep -v 'disabled\|README') ; do
     source ~/.bashprofile/private-modules/$file;
 done
-noproxy

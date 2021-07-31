@@ -71,21 +71,6 @@ function findinfile()
 }
 
 ##
-# Sets a notification using the Growl notification system on mac
-#
-# @param string message The message to notify with
-#
-# @return void
-#
-# NOTE: MAC only
-#
-function growl()
-{
-    local message="$@";
-    echo -e $'\e]9;'$message'\007';
-}
-
-##
 # Clears the screen and changes to a given directory
 #
 # @param directory string
@@ -437,5 +422,206 @@ function gvc()
     rc=$?
     cd - &>/dev/null
     return $rc
+}
+
+function mapbranch()
+{
+    local branch=$(git name-rev HEAD | awk '{print $NF}')
+    case ${branch} in
+        'sandbox')
+            echo ${branch}
+            ;;
+        'develop')
+            echo 'dev'
+            ;;
+        'master')
+            echo 'test'
+            ;;
+    esac
+}
+
+##
+# Switch to a different kubernetes environment
+#
+function onkube()
+{
+    local environments="sandbox dev test stage prod"
+    local environment=$1
+    if [ ! -d ~/.kube/${environment} ]; then
+        mkdir ~/.kube/${environment}
+    fi
+
+    local stackname="sec-isecops-${2}-stack"
+    if [ -z "${environment}" ] || ! contains ${environment} ${environments} ; then
+        echo "usage onkube [${environments}] <stackname>"
+        return
+    fi
+    if [ "${stackname}" != "${KUBECONFIG}" ]; then
+        export KUBECONFIG=~/.kube/${environment}/${stackname}.config
+        echo "Loaded ${KUBECONFIG}"
+        awssetup ${environment}
+    fi
+    killall kubectl
+    dashboard
+}
+
+function awssetup()
+{
+    local environment=$1
+    unset AWS_DEFAULT_REGION
+    unset AWS_ACCESS_KEY_ID
+    unset AWS_SECRET_ACCESS_KEY
+    if [ "${environment}" != 'local' ]; then
+        inform "Loading AWS Environment ${environment}"
+        eval $(aws-env mss${environment})
+        export AWS_DEFAULT_REGION=$(grep -A1 'mss'${environment}']' ~/.aws/config | sed '1d;s/.*=\(.*\)/\1/')
+    fi
+}
+
+function tfinit()
+{
+    rm -rf .terraform
+    local configpath="config/backend/aws"
+    if [ ! -d "${configpath}" ]; then
+        configpath="../${configpath}"
+    fi
+    $(which terraform) init -backend-config=${configpath}/${environment^^}.config
+    if ! $(which terraform) workspace select ${environment} ; then
+        $(which terraform) workspace new ${environment}
+    fi
+}
+
+function tf()
+{
+    local cwd=$(pwd)
+    # switch to the actual terraform directory
+    # TODO Query if multiple providers?
+    local provider="aws"
+
+    local rootpath=""
+    local configpath="config"
+    local dirname="$(pwd)"
+    if [ ! -f "provider.tf" ]; then
+        echo "Searching for provider config"
+        moduleroot
+        rootpath=$(pwd)
+        dirname=$(dirname $(find . -name "provider.tf" | head -n 1) 2>/dev/null)
+        if [ -z "${dirname}" ]; then
+            echo "Not a terraform module"
+            return
+        fi
+        echo "Switching to ${dirname}"
+        cd ${dirname}
+    fi
+    while [ ! -d ${configpath} ]; do
+        configpath="../${configpath}"
+    done
+
+    local vpcs="control management services-be ssn-ingest www-ingest search"
+    local terraform_commands="$($(which terraform) | sed -n '/^[ ]\+/p' | awk '{print $1}')"
+    local environment=""
+    local command="plan"
+    local service=""
+    local tfargs=()
+    while [ ${#@} -gt 0 ]; do
+        local argument=$1
+        if contains ${argument} ${terraform_commands} setup kube reinit; then
+            command=${argument}
+        elif contains ${argument} $(
+            find ${configpath} -name *.config -exec basename {} \; | \
+                cut -d\. -f1 | tr "[:upper:]" "[:lower:]" | sort | uniq
+        ); then
+            environment=${argument}
+        elif contains ${argument} "${vpcs}"; then
+            service=${argument}
+        else
+            tfargs+=(${argument})
+        fi
+        shift
+    done
+    #privoxy ${environment}
+    if [ -z ${environment} ]; then
+        environment=$(mapbranch)
+    fi
+    local current_ws=$($(which terraform) workspace show)
+
+    case ${command} in
+        "setup")
+            awssetup ${environment}
+            tfinit ${environment}
+            if [ ! -z ${service} ]; then
+                onkube ${environment} ${service}
+            fi
+            return
+            ;;
+        "reinit")
+            tf setup ${current_ws} $(basename ${KUBECONFIG%.config})
+            return
+            ;;
+        "kube")
+            ;;
+        *)
+            ;;
+    esac
+    local skiptfargs=(
+        "validate"
+        "output"
+        "state"
+    )
+    if ! contains ${command} ${skiptfargs[@]}; then
+        local vars_files=(
+            "${configpath}/generic.tfvars"
+            "${configpath}/${environment}.tfvars"
+            "${configpath}/${provider}/generic.tfvars"
+            "${configpath}/${provider}/${environment}.tfvars"
+        )
+
+        local region=$(grep -A1 'mss'${environment}']' ~/.aws/config | sed '1d;s/.*=\(.*\)/\1/')
+
+        if contains ${command} plan apply validate; then
+            tfargs+=(
+                "-var region=${region}"
+                "-var mss_env=${environment}"
+            )
+        fi
+
+        if [ ${command} == 'apply' ]; then
+            tfargs+=(
+                "-auto-approve"
+            )
+        fi
+
+        for file in ${vars_files[@]}; do
+            if [ -f ${file} ]; then
+                tfargs+=("-var-file=${file}")
+            fi
+        done
+    fi
+
+    if [ "${current_ws}" != "${environment}" ]; then
+        echo "Current workspace '${current_ws}' != environment workspace '${environment}'"
+        if [ "$(query "Do you want to switch to workspace ${environment}?" y n)" == 'y' ]; then
+            tf setup ${environment} $(basename ${KUBECONFIG%-stack.config} | sed 's/sec-isecops-//')
+        fi
+    fi
+    exec_command $(which terraform) ${command} ${tfargs[@]}
+    local exit_code=$?
+    cd ${cwd}
+    return ${exit_code}
+}
+
+function tunnels()
+{
+    while IFS= read -r line ; do
+        local bastion=$(cut -d: -f1 <<<${line})
+        local port=$(cut -d: -f2 <<<${line})
+        if [  ! -n "${bastion}" ]; then
+            continue
+        fi
+        if ! ps aux | grep ".*NNTfq.*${bastion}" | grep -qv grep; then
+            inform "Connecting to ${bastion} and forwarding ${port}"
+            ssh -NNTfq -o DynamicForward=${port} ${bastion}
+        fi
+    done < ~/.config/tunnels.config
 }
 

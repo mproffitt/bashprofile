@@ -227,6 +227,18 @@ function timestamp()
 }
 
 ##
+# Test if a given array contains a particular value
+# @param what  string
+# @param array array
+#
+function contains()
+{
+    local what=$1
+    shift
+    grep -q " ${what} " <<<"| $@ |"
+}
+
+##
 # Gets a timestamp for now
 #
 function now()

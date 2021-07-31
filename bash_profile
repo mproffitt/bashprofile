@@ -29,6 +29,7 @@ export HOME=$HOME;
 
 export GRADLE_HOME='/usr/local/gradle'
 export GOPATH="$HOME/src/go"
+export GOBIN="${GOPATH}/bin"
 export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
 
 # add application specific <bin> path
@@ -124,8 +125,14 @@ fi
 SSH_ENV="$HOME/.keychain/${HOSTNAME}-sh"
 function startAgent() {
     inform "Initialising new SSH agent..."
-    for file in $(ls "${HOME}/.ssh" | grep rsa | grep -v '\.pub$'); do
-        /usr/bin/keychain "${HOME}/.ssh/$file" &>/dev/null
+    export BW_SESSION=$(
+        bw unlock --raw $(kwalletcli -f 'accounts' -e bitwarden | grep master | cut -d: -f2- | awk '{print $NF}')
+    )
+    bw sync
+    for f in $(ls ~/.ssh | grep id_rsa | grep -v pub); do if [ -d $f ]; then continue; fi;
+        expect ${HOME}/.bashprofile/bin/keychain.expect ~/.ssh/$f $(
+            bw list items --search $(basename $f) | jq -r '.[].fields[]|select(.name=="password").value'
+        );
     done
     source "${SSH_ENV}" > /dev/null
 }
@@ -140,6 +147,7 @@ if [ -f "${SSH_ENV}" ]; then
 else
      startAgent;
 fi
+tunnels
 
 # Do not run tmux if we are running cygwin - it's hellishly slow.
 if [ "$(uname -o)" != 'Cygwin' ]; then
