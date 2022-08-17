@@ -12978,8 +12978,10 @@ __start_kubectl()
 
 if [[ $(type -t compopt) = "builtin" ]]; then
     complete -o default -F __start_kubectl kubectl
+    complete -o default -F __start_kubectl k
 else
     complete -o default -o nospace -F __start_kubectl kubectl
+    complete -o default -o nospace -F __start_kubectl k
 fi
 
 # ex: ts=4 sw=4 et filetype=sh

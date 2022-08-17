@@ -228,7 +228,7 @@ function settitle()
     then
         name="$1"
     fi
-    printf "\033k$name\033\\"
+    printf "\033k$name\033\\ "
 }
 
 ##
@@ -487,7 +487,7 @@ function tfinit()
     fi
     $(which terraform) init -backend-config=${configpath}/${environment^^}.config
     if ! $(which terraform) workspace select ${environment} ; then
-        $(which terraform) workspace new ${environment}
+        $(which terraform) workspace new "${environment}"
     fi
 }
 
@@ -612,16 +612,89 @@ function tf()
 
 function tunnels()
 {
+    if [ ! -f ~/.config/tunnels.config ]; then
+        return 0
+    fi
+    local netforward=1
     while IFS= read -r line ; do
+        if [ "${line}" == 'netforward' ]; then
+            netforward=0
+            continue
+        fi
         local bastion=$(cut -d: -f1 <<<${line})
         local port=$(cut -d: -f2 <<<${line})
         if [  ! -n "${bastion}" ]; then
             continue
         fi
-        if ! ps aux | grep ".*NNTfq.*${bastion}" | grep -qv grep; then
+        if ! ps aux | grep ".*NNTfq.*${port}" | grep -qv grep; then
             inform "Connecting to ${bastion} and forwarding ${port}"
-            ssh -NNTfq -o DynamicForward=${port} ${bastion}
+            if [ ${netforward} -eq 1 ]; then
+                ssh -NNTfq -o DynamicForward=${port} ${bastion}
+            else
+                ssh -NNTfq -L ${port}:localhost:${port} meteor.choclab.net
+            fi
         fi
     done < ~/.config/tunnels.config
 }
 
+function orcaext ()
+{
+    if docker ps | grep --color=auto -q orcaext; then
+        docker exec -it $(docker ps | grep orcaext | awk '{print $1}') /bin/bash;
+    else
+        docker run --rm --cpuset-cpus="0-15" -v /mnt/sequencer:/mnt/sequencer -d orcaext;
+        orcaext;
+    fi
+}
+
+function onchoclab() {
+    cd "${HOME}/Archivo/src/cluster/nebula-cluster/pkg/infrastructure"
+    sudo vagrant ssh node1.choclab.net -- 'cat /etc/kubernetes/admin.conf' > ${HOME}/.kube/config
+    cd - &>/dev/null
+    kubectl describe secret $(kubectl get secrets | grep dashboard-admin-sa-token | awk '{print $1}') | grep token: | awk '{print $2}' | xclip -sel clip
+    open "https://cluster.choclab.net"
+    complete -W "$(k get ns | awk '!/NAME/{print $1}')" kc
+    complete -W "$(k -n flux-system exec $(k get pods -n flux-system | grep source | awk '{print $1}') -- ls /data/gitrepository/default)" kcpgs
+}
+
+function ops() {
+    local args="${@}"
+    if [ ${#@} -eq 0 ]; then
+        args="-h"
+    fi
+    export OPSCTL_GITHUB_TOKEN=$(bwv "development/github.com?field=full-access-token-never-expire" | jq -r .value)
+    opsctl version update &>/dev/null
+    opsctl ${args}
+    unset OPSCTL_GITHUB_TOKEN
+    if [ "$1" = 'login' ]; then
+        complete -W "$(k get ns | awk '!/NAME/{print $1}')" kc
+        if [ -n "$3" ]; then
+            complete -W "$(k -n flux-system exec $(k get pods -n flux-system | grep source | awk '{print $1}') -- ls /data/gitrepository/default)" kcpgs
+        fi
+    fi
+}
+
+function kgs() {
+    local args="${@}"
+    if [ ${#@} -eq 0 ]; then
+        args="-h"
+    fi
+    export OPSCTL_GITHUB_TOKEN=$(bwv "development/github.com?field=full-access-token-never-expire" | jq -r .value)
+    kubectl gs selfupdate &>/dev/null
+    kubectl gs ${args}
+    unset OPSCTL_GITHUB_TOKEN
+}
+
+function kc() {
+    k config set-context --current --namespace=$1
+}
+
+function kcpgs() {
+    [ -d ${HOME}/src/gitrepos ] || mkdir ${HOME}/src/gitrepos
+    cd ~/src/gitrepos
+    rm -r ./*
+    k cp -n flux-system $(k get pods -n flux-system | grep source | awk '{print $1}'):/data/gitrepository/default/$1 .
+    tar -xvzf $(ls *.tar.gz)
+}
+
+alias kl='kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind'

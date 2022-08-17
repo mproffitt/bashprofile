@@ -147,8 +147,8 @@ function _load_sshfs()
     local location=$1;
     if [ -f "$location/.sshfs.config" ]; then
         inform "Mounting remote file system";
-        sshfs -o \
-            nonempty,reconnect,ConnectTimeout=3,ConnectionAttempts=1,ServerAliveInterval=15,ServerAliveCountMax=3 \
+        # used to be -o nonempty but this no longer seems to work
+        sshfs -o reconnect,ConnectTimeout=3,ConnectionAttempts=1,ServerAliveInterval=15,ServerAliveCountMax=3 \
             $(cat $location/.sshfs.config) $location;
     fi
 }

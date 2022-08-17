@@ -5,19 +5,12 @@
 # @package bashprofile
 # @author  Martin Proffitt <mproffitt@choclab.net>
 
-##
-# Do not load if we're logging in as root, or if we're not in an
-# interactive session.
-if [ "$(whoami)" = 'root' ] || ! echo $- | grep -q i; then
-    return;
-fi
-reset
-
 export CLICOLOR=1
 export LSCOLORS=GxFxCxDxBxegedabagacad
 export HISTSIZE=10000
 export HISTFILESIZE=10000
 export HISTCONTROL=ignoreboth
+export HISTTIMEFORMAT="%F:%T "
 export EDITOR=vim
 
 [ "$TERM" = 'xterm' ] && export TERM='xterm-256color'
@@ -26,34 +19,52 @@ export HOME=$HOME;
 [ -z "${XDG_CONFIG_HOME}" ] && export XDG_CONFIG_HOME="${HOME}/.config"
 
 # Setup the terminal
-
 export GRADLE_HOME='/usr/local/gradle'
-export GOPATH="$HOME/src/go"
+export GOPATH="$HOME/Archivo/src/go"
 export GOBIN="${GOPATH}/bin"
-export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
+export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64/"
 
-# add application specific <bin> path
-[ -d "${HOME}/bin"                   ] && PATH="${HOME}/bin:$PATH"
-[ -d "/git/repos/GitTools/bin"       ] && PATH="$PATH:${HOME}/git/repos/GitTools/bin"
-[ -d "/var/lib/gems/1.8/bin"         ] && PATH="$PATH:/var/lib/gems/1.8/bin"
-[ -d "/usr/local/mysql/bin"          ] && PATH="$PATH:/usr/local/mysql/bin"
-[ -d "/usr/local/pear/bin"           ] && PATH="$PATH:/usr/local/pear/bin"
-[ -d "/usr/local/gradle/bin"         ] && PATH="$PATH:/usr/local/gradle/bin"
-[ -d "${HOME}/bin/jmeter/bin"        ] && PATH="$PATH:${HOME}/bin/jmeter/bin"
-[ -d "/usr/texbin"                   ] && PATH="$PATH:/usr/texbin"
-[ -d "${HOME}/.local/bin"            ] && PATH="$HOME/.local/bin:$PATH"
-[ -d "/usr/local/cuda/bin"           ] && PATH="$PATH:/usr/local/cuda/bin"
-[ -d "/usr/local/go/bin"             ] && PATH="$PATH:/usr/local/go/bin"
-[ -d "${GOPATH}/bin"                 ] && PATH="$PATH:${GOPATH}/bin"
-[ -d "/opt/mssql-tools/bin"          ] && PATH="$PATH:/opt/mssql-tools/bin"
-[ -d "${HOME}/.bashprofile/bin"      ] && PATH="$PATH:${HOME}/.bashprofile/bin"
-
-# Windows specific paths
-if [ "$(uname -o)" = 'Cygwin' ] ; then
-    [ -d '/cygdrive/c/Program Files (x86)/MSBuild/14.0/Bin' ] && PATH=$PATH':/cygdrive/c/Program Files (x86)/MSBuild/14.0/Bin'
+export GOROOT=""
+if $(which go | grep -q snap) ; then
+    export GOROOT=/snap/go/current
 fi
 
-export PATH=$PATH
+if [ "${TMUX}" == "" ] ; then
+    # add application specific <bin> path
+    [ -d "/var/lib/gems/1.8/bin"          ] && PATH="$PATH:/var/lib/gems/1.8/bin"
+    [ -d "/usr/local/mysql/bin"           ] && PATH="$PATH:/usr/local/mysql/bin"
+    [ -d "/usr/local/pear/bin"            ] && PATH="$PATH:/usr/local/pear/bin"
+    [ -d "/usr/local/gradle/bin"          ] && PATH="$PATH:/usr/local/gradle/bin"
+    [ -d "/usr/texbin"                    ] && PATH="$PATH:/usr/texbin"
+    [ -d "/usr/local/cuda/bin"            ] && PATH="$PATH:/usr/local/cuda/bin"
+    [ -d "/usr/local/go/bin"              ] && PATH="$PATH:/usr/local/go/bin"
+    [ -d "/opt/mssql-tools/bin"           ] && PATH="$PATH:/opt/mssql-tools/bin"
+
+    [ -d "${HOME}/bin"                    ] && PATH="${PATH}:${HOME}/bin" # meteor
+    [ -d "${HOME}/Bin"                    ] && PATH="${PATH}:${HOME}/Bin" # nebula
+    [ -d "${HOME}/bin/jmeter/bin"         ] && PATH="$PATH:${HOME}/bin/jmeter/bin"
+    [ -d "${HOME}/git/repos/GitTools/bin" ] && PATH="$PATH:${HOME}/git/repos/GitTools/bin"
+    [ -d "${HOME}/.local/bin"             ] && PATH="${PATH}:$HOME/.local/bin"
+    [ -d "${GOPATH}/bin"                  ] && PATH="$PATH:${GOPATH}/bin"
+    [ -d "${HOME}/.bashprofile/bin"       ] && PATH="$PATH:${HOME}/.bashprofile/bin"
+
+    [ -d "${HOME}/.krew/bin" ] && PATH="${PATH}:${HOME}/.krew/bin"
+
+    # Windows specific paths
+    if [ "$(uname -o)" = 'Cygwin' ] ; then
+        [ -d '/cygdrive/c/Program Files (x86)/MSBuild/14.0/Bin' ] && PATH=$PATH':/cygdrive/c/Program Files (x86)/MSBuild/14.0/Bin'
+    fi
+    export PATH=$PATH
+fi
+
+##
+# Do not load if we're logging in as root, or if we're not in an
+# interactive session.
+if [ "$(whoami)" = 'root' ] || ! echo $- | grep -q i; then
+    return;
+fi
+reset
+
 
 for file in $(ls "$HOME"/.bashprofile | grep -v 'install\|README\|bash_profile') ; do
     if [ -f "$HOME/.bashprofile/$file" ]  && ! echo "$file" | grep -q disabled ; then
@@ -122,18 +133,24 @@ if [ -z "${POWERLINE_BASH_CONTINUATION}" ]; then
     PS1='$(getPrompt)\n\[\033[00m\]\$ '
 fi
 
+function addKeys() {
+    for f in $(ls ~/.ssh | grep id_rsa | grep -v pub); do if [ -d $f ]; then continue; fi;
+        expect ${HOME}/.bashprofile/bin/keychain.expect ~/.ssh/$f $(
+            bwv "keys/$(basename ${f})?field=password" | jq -r .value
+        );
+    done
+}
+
 SSH_ENV="$HOME/.keychain/${HOSTNAME}-sh"
 function startAgent() {
     inform "Initialising new SSH agent..."
-    export BW_SESSION=$(
-        bw unlock --raw $(kwalletcli -f 'accounts' -e bitwarden | grep master | cut -d: -f2- | awk '{print $NF}')
-    )
-    bw sync
-    for f in $(ls ~/.ssh | grep id_rsa | grep -v pub); do if [ -d $f ]; then continue; fi;
-        expect ${HOME}/.bashprofile/bin/keychain.expect ~/.ssh/$f $(
-            bw list items --search $(basename $f) | jq -r '.[].fields[]|select(.name=="password").value'
-        );
+    # wait for bitwarden to come up fully
+    inform "Waiting for bwv to become available"
+    while [ -z "$(bwv 'example/test?property=username' | jq -r .value 2>/dev/null)" ]; do
+        sleep 1;
     done
+    inform "Loading ssh keys"
+    addKeys;
     source "${SSH_ENV}" > /dev/null
 }
 
@@ -164,8 +181,16 @@ fi
 # Python virtualenv
 export WORKON_HOME="${HOME}/.virtualenv"
 export VIRTUALENVWRAPPER_PYTHON="/usr/bin/python3"
-source /usr/local/bin/virtualenvwrapper.sh
+source ~/.local/bin/virtualenvwrapper.sh
 
-#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="${HOME}/.sdkman"
 [[ -s "${HOME}/.sdkman/bin/sdkman-init.sh" ]] && source "${HOME}/.sdkman/bin/sdkman-init.sh"
+
+if ! grep -q 'history' <<<${PROMPT_COMMAND}; then
+    export PROMPT_COMMAND="${PROMPT_COMMAND}"$'\n'"history -a"
+fi
+
+export NVM_DIR="$HOME/.config/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+

@@ -14,3 +14,5 @@ fi
 for file in $(ls ~/.bashprofile/completion-modules/ | grep -v 'disabled\|README') ; do
     source ~/.bashprofile/completion-modules/$file;
 done
+
+source <(flux completion bash)

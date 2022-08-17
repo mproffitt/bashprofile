@@ -41,7 +41,7 @@ function rhymes()
     word=$1;
     oldIFS=$IFS;
     IFS=$'\n';
-    list=$(curl -s "http://www.rhymezone.com/r/rhyme.cgi?Word=$word&typeofrhyme=$t"                           |
+    list=$(curl -Ls "http://www.rhymezone.com/r/rhyme.cgi?Word=$word&typeofrhyme=$t"                           |
         sed -n 's/<[^>]*>//g;/^$/d; /1\ syllable\:/,$p;'                                                      |
         sed '/Words\ and\ phrases\ that\ almost\ rhyme\:/,$d; /function\ logfeed/,$d; s/&nbsp;/ /g; s/, /|/g' |
         sed "s/^\([0-9].*\)/\\`echo -e '\n\r'`\1\\`echo -e '\n\r'`------------/g"                             |
@@ -81,7 +81,7 @@ function define()
     word=$1;
     oldIFS=$IFS;
     IFS=$'\n';
-    list=$(curl -s "http://rhymezone.com/r/rhyme.cgi?Word=$word&typeofrhyme=def" |
+    list=$(curl -Ls "http://rhymezone.com/r/rhyme.cgi?Word=$word&typeofrhyme=def" |
         sed -n 's/<[^>]*>//g;/^$/d;/^Definitions\ of/,$p'                        |
         sed '/Related\ words/,$d; /Search for/,$d; s/&nbsp;/ /g;'
     );
@@ -119,13 +119,13 @@ function synonyms()
     IFS=$'\n';
 
     if [ "$t" = 'syn' ] ; then
-        list=$(curl -s "http://rhymezone.com/r/rhyme.cgi?Word=$word&typeofrhyme=syn" |
+        list=$(curl -Ls "http://rhymezone.com/r/rhyme.cgi?Word=$word&typeofrhyme=syn" |
             sed -n 's/<[^>]*>//g;/^$/d;/^Words\ and\ phrases/,$p'                    |
             sed '/Want\ more\ ideas/,$d; s/&nbsp;/ /g; /(.*)/d; s/, /|/g'            |
             sed "/Antonyms.../d; s/^\(Words.*\)/\1\\`echo -e '\n\r'`/";
         );
     else
-        list=$(curl -s "http://rhymezone.com/r/rhyme.cgi?Word=$word&typeofrhyme=rel" |
+        list=$(curl -Ls "http://rhymezone.com/r/rhyme.cgi?Word=$word&typeofrhyme=rel" |
             sed -n 's/<[^>]*>//g;/^$/d;/^Words\ and\ phrases/,$p'                    |
             sed '/Appears\ in\ the/,$d; s/&nbsp;/ /g; /(.*)/d; s/, /|/g'            |
             sed "s/\(.*:\)/\\`echo -e '\n\r'`\1\\`echo -e '\n\r'`-------------------------------/g" |
@@ -167,7 +167,7 @@ function antonyms()
 
     oldIFS=$IFS;
     IFS=$'\n';
-    list=$(curl -s "http://rhymezone.com/r/rhyme.cgi?Word=$word&typeofrhyme=ant" |
+    list=$(curl -Ls "http://rhymezone.com/r/rhyme.cgi?Word=$word&typeofrhyme=ant" |
         sed -n 's/<[^>]*>//g;/^$/d;/^Words\ and\ phrases/,$p'                    |
         sed '/Commonly\ searched/,$d; s/&nbsp;/ /g; /(.*)/d; s/,//g'             |
         sed "s/^\(Words.*\)/\1\\`echo -e '\n\r'`/";
