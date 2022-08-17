@@ -95,9 +95,14 @@ alias pw='echo -n $(pwgen -synr \`\"\\ 20 1) | xclip -sel clip'
 
 alias bwp="bwv */bitwarden?property=password | jq -r .value | xclip -sel clip"
 
+alias tiller="kubectl describe secret \$(kubectl get secrets | grep 'stack-token\|tiller' | awk '{print \$1}') | grep '^token:' | awk '{print \$2}' | xclip -sel clip"
+alias dashboard="kubectl port-forward -n kube-system service/kubernetes-dashboard 8080:443 &>/dev/null & tiller"
+alias vaultconsul="kubectl port-forward -n vault service/sec-isecops-control-stack-consul-consul-ui 8081:443 &>/dev/null &"
+
 alias dmesg='sudo dmesg'
 
 alias k='kubectl'
 alias h='helm'
 alias kk='k kyverno'
+alias kgs='k gs'
 alias kngs='k -n giantswarm'

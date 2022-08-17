@@ -5,6 +5,14 @@
 # @package bashprofile
 # @author  Martin Proffitt <mproffitt@choclab.net>
 
+##
+# Do not load if we're logging in as root, or if we're not in an
+# interactive session.
+if [ "$(whoami)" = 'root' ] || ! echo $- | grep -q i; then
+    return;
+fi
+reset
+
 export CLICOLOR=1
 export LSCOLORS=GxFxCxDxBxegedabagacad
 export HISTSIZE=10000
@@ -14,8 +22,6 @@ export HISTTIMEFORMAT="%F:%T "
 export EDITOR=vim
 
 [ "$TERM" = 'xterm' ] && export TERM='xterm-256color'
-[ -z "$HOME" ] && HOME='/home/'$(whoami);
-export HOME=$HOME;
 [ -z "${XDG_CONFIG_HOME}" ] && export XDG_CONFIG_HOME="${HOME}/.config"
 
 # Setup the terminal
@@ -29,7 +35,7 @@ if $(which go | grep -q snap) ; then
     export GOROOT=/snap/go/current
 fi
 
-if [ "${TMUX}" == "" ] ; then
+if [ -z "${TMUX}" ] ; then
     # add application specific <bin> path
     [ -d "/var/lib/gems/1.8/bin"          ] && PATH="$PATH:/var/lib/gems/1.8/bin"
     [ -d "/usr/local/mysql/bin"           ] && PATH="$PATH:/usr/local/mysql/bin"
@@ -49,21 +55,8 @@ if [ "${TMUX}" == "" ] ; then
     [ -d "${HOME}/.bashprofile/bin"       ] && PATH="$PATH:${HOME}/.bashprofile/bin"
 
     [ -d "${HOME}/.krew/bin" ] && PATH="${PATH}:${HOME}/.krew/bin"
-
-    # Windows specific paths
-    if [ "$(uname -o)" = 'Cygwin' ] ; then
-        [ -d '/cygdrive/c/Program Files (x86)/MSBuild/14.0/Bin' ] && PATH=$PATH':/cygdrive/c/Program Files (x86)/MSBuild/14.0/Bin'
-    fi
     export PATH=$PATH
 fi
-
-##
-# Do not load if we're logging in as root, or if we're not in an
-# interactive session.
-if [ "$(whoami)" = 'root' ] || ! echo $- | grep -q i; then
-    return;
-fi
-reset
 
 
 for file in $(ls "$HOME"/.bashprofile | grep -v 'install\|README\|bash_profile') ; do
@@ -156,23 +149,13 @@ function startAgent() {
 
 # Start the key agent before starting TMUX
 if [ -f "${SSH_ENV}" ]; then
-     source "${SSH_ENV}" > /dev/null
-     #if ! ps -ef | grep -v grep | grep "${SSH_AGENT_PID}" > /dev/null; then
-     if ! ps aux | grep -v grep | grep -q ".*${SSH_AGENT_PID}.*ssh-agent$" ; then
-         startAgent;
-     fi
-else
-     startAgent;
+    source "${SSH_ENV}"
+fi
+
+if [ -z ${SSH_AGENT_PID} ] || [ -z "$(pgrep ssh-agent | awk '/'${SSH_AGENT_PID}'/{print}')" ]; then
+    startAgent;
 fi
 tunnels
-
-# Do not run tmux if we are running cygwin - it's hellishly slow.
-if [ "$(uname -o)" != 'Cygwin' ]; then
-    # if tmux exists and is not currently running, load it.
-    if which tmux &>/dev/null && ! pgrep tmux &>/dev/null ; then
-        tmux;
-    fi
-fi
 
 [[ -d "$HOME/.rvm" ]] && [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm";
 # suppress error code from last command as we don't care if .rvm doesn't exist.
@@ -181,7 +164,7 @@ fi
 # Python virtualenv
 export WORKON_HOME="${HOME}/.virtualenv"
 export VIRTUALENVWRAPPER_PYTHON="/usr/bin/python3"
-source ~/.local/bin/virtualenvwrapper.sh
+source $(which virtualenvwrapper.sh)
 
 export SDKMAN_DIR="${HOME}/.sdkman"
 [[ -s "${HOME}/.sdkman/bin/sdkman-init.sh" ]] && source "${HOME}/.sdkman/bin/sdkman-init.sh"
