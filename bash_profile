@@ -19,10 +19,10 @@ export HOME=$HOME;
 [ -z "${XDG_CONFIG_HOME}" ] && export XDG_CONFIG_HOME="${HOME}/.config"
 
 # Setup the terminal
-export GRADLE_HOME='/usr/local/gradle'
-export GOPATH="$HOME/Archivo/src/go"
-export GOBIN="${GOPATH}/bin"
 export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64/"
+export GRADLE_HOME='/usr/local/gradle'
+export GOPATH="$HOME"
+export GOBIN="${GOPATH}/Bin"
 
 export GOROOT=""
 if $(which go | grep -q snap) ; then
