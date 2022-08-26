@@ -3769,16 +3769,12 @@ __start_opsctl()
     __opsctl_handle_word
 }
 
-
-export OPSCTL_GITHUB_TOKEN=$(bwv "development/github.com?field=full-access-token-never-expire" | jq -r .value)
-if [[ "$(type -t compopt)" = "builtin" ]]; then
+if [ "$(type -t compopt)" = "builtin" ]; then
     complete -o default -F __start_opsctl opsctl
     complete -o default -F __start_opsctl ops
 else
-    echo c
     complete -o default -o nospace -F __start_opsctl opsctl
     complete -o default -o nospace -F __start_opsctl ops
 fi
-unset OPSCTL_GITHUB_TOKEN
 
 # ex: ts=4 sw=4 et filetype=sh

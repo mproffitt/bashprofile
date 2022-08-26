@@ -697,4 +697,25 @@ function kcpgs() {
     tar -xvzf $(ls *.tar.gz)
 }
 
+function ssh() {
+    local domain='choclab.net'
+    local args=()
+    broadcasthost send -d $domain &>/dev/null
+    local islocal=$?
+    sshcmd=$([ $islocal -eq 0 ] && echo 'ssh' || echo 'autossh')
+    for a in $@; do
+        if [ "${x#*\.*}" = "${domain}" ]; then
+            case ${a%*.${domain}} in
+                nebula)
+                    ;&
+                galaxy)
+                    a=$([ $islocal -eq 0 ] && echo "nebula.${domain}" || echo "galaxy.${domain}")
+                    ;;
+            esac
+        fi
+        args+=($a)
+    done
+    $(which ${sshcmd}) "${args[@]}"
+}
+
 alias kl='kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind'
