@@ -28,7 +28,7 @@ export EDITOR=vim
 export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64/"
 export GRADLE_HOME='/usr/local/gradle'
 export GOPATH="$HOME"
-export GOBIN="${GOPATH}/Bin"
+export GOBIN="${GOPATH}/bin"
 
 export GOROOT=""
 if grep -q snap <<<$(which go); then
@@ -36,7 +36,12 @@ if grep -q snap <<<$(which go); then
 fi
 
 if [ -z "${TMUX}" ] ; then
+    # reset PATH to system default - useful when re-sourcing the profile
+    # so path doesn't fill with duplicates
+    source /etc/environment
     # add application specific <bin> path
+    # We load these from outside TMuX to ensure they are loaded only once and
+    # shared across sessions instead of attempting to load on each and every session
     [ -d "/var/lib/gems/1.8/bin"          ] && PATH="$PATH:/var/lib/gems/1.8/bin"
     [ -d "/usr/local/mysql/bin"           ] && PATH="$PATH:/usr/local/mysql/bin"
     [ -d "/usr/local/pear/bin"            ] && PATH="$PATH:/usr/local/pear/bin"
@@ -46,15 +51,12 @@ if [ -z "${TMUX}" ] ; then
     [ -d "/usr/local/go/bin"              ] && PATH="$PATH:/usr/local/go/bin"
     [ -d "/opt/mssql-tools/bin"           ] && PATH="$PATH:/opt/mssql-tools/bin"
 
-    [ -d "${HOME}/bin"                    ] && PATH="${PATH}:${HOME}/bin" # meteor
-    [ -d "${HOME}/Bin"                    ] && PATH="${PATH}:${HOME}/Bin" # nebula
+    [ -d "${HOME}/bin"                    ] && PATH="$PATH:${HOME}/bin" # meteor
     [ -d "${HOME}/bin/jmeter/bin"         ] && PATH="$PATH:${HOME}/bin/jmeter/bin"
     [ -d "${HOME}/git/repos/GitTools/bin" ] && PATH="$PATH:${HOME}/git/repos/GitTools/bin"
-    [ -d "${HOME}/.local/bin"             ] && PATH="${PATH}:$HOME/.local/bin"
-    [ -d "${GOPATH}/bin"                  ] && PATH="$PATH:${GOPATH}/bin"
+    [ -d "${HOME}/.local/bin"             ] && PATH="$PATH:$HOME/.local/bin"
     [ -d "${HOME}/.bashprofile/bin"       ] && PATH="$PATH:${HOME}/.bashprofile/bin"
-
-    [ -d "${HOME}/.krew/bin" ] && PATH="${PATH}:${HOME}/.krew/bin"
+    [ -d "${HOME}/.krew/bin"              ] && PATH="$PATH:${HOME}/.krew/bin"
     export PATH=$PATH
 fi
 
